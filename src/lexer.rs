@@ -11,13 +11,13 @@ pub enum Token {
     Print,
     Identifier(String),
     Number(f64),
-    Unit(String),
     Colon,
     Equal,
     Semicolon,
     Plus,
     Minus,
     Star,
+    Dot,
     Slash,
     Caret,
     LParenthesis,
@@ -80,7 +80,7 @@ impl Lexer {
         let mut res = String::new();
         res.push(c);
         while let Some(c) = self.peek() {
-            if c.is_alphanumeric() || c == '_' || c == '/' || c == '.' {
+            if c.is_alphanumeric() || c == '_' {
                 res.push(self.advance().unwrap());
             } else {
                 break;
@@ -101,11 +101,7 @@ impl Lexer {
             "while" => Some(Token::While),
             "print" => Some(Token::Print),
             _ => {
-                if identifier.contains('/') || identifier.contains('.') || identifier.chars().all(|c| c.is_alphabetic()) {
-                    Some(Token::Unit(identifier))
-                } else {
-                    Some(Token::Identifier(identifier))
-                }
+                Some(Token::Identifier(identifier))
             }
         }
     }
@@ -121,6 +117,7 @@ impl Lexer {
             '+' => Some(Token::Plus),
             '-' => Some(Token::Minus),
             '*' => Some(Token::Star),
+            '.' => Some(Token::Dot),
             '/' => Some(Token::Slash),
             '^' => Some(Token::Caret),
             '(' => Some(Token::LParenthesis),
@@ -130,11 +127,11 @@ impl Lexer {
             c if c.is_ascii_digit() => {
                 let num = self.scan_number(c);
                 Some(Token::Number(num.parse().unwrap()))
-            },
+            }
             c if c.is_alphabetic() => {
                 let identifier = self.scan_identifier(c);
                 self.match_identifier(identifier)
-            },
+            }
             _ => None,
         }
     }
