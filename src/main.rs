@@ -1,6 +1,7 @@
 use lexer::Lexer;
 
 mod lexer;
+mod parser;
 
 fn main() {
     let mut lexer = Lexer::new("let velocity: m/s = 10.0;");
