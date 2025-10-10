@@ -1,11 +1,13 @@
-use lexer::Lexer;
+use lexer::{Lexer, Token};
+use parser::Parser;
 
 mod lexer;
 mod parser;
 
 fn main() {
-    let mut lexer = Lexer::new("let velocity: m/s = 10.0;");
-    while let Some(token) = lexer.next() {
-        println!("{:?}", token);
-    }
+    let lexer = Lexer::new("let velocity: m/s = 10.0;");
+    let tokens: Vec<Token> = lexer.collect();
+    let mut parser = Parser::new(tokens);
+    let ast = parser.parse();
+    println!("{:#?}", ast);
 }

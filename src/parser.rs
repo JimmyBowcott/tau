@@ -83,6 +83,58 @@ impl Parser {
         self.current >= self.tokens.len()
     }
 
+    fn parse_unit_base(&mut self) -> UnitExpr {
+        let base = if let Some(Token::Identifier(id)) = self.advance() {
+            UnitExpr::Symbol(id.clone())
+        } else {
+            panic!("Expected unit identifier");
+        };
+        base
+    }
+
+    fn parse_unit_exponent(&mut self) -> Option<f64> {
+        if let Some(Token::Caret) = self.peek() {
+            self.advance();
+            if let Some(Token::Number(n)) = self.advance() {
+                return Some(*n);
+            } else {
+                panic!("Expected number after ^");
+            }
+        } else {
+            return None;
+        }
+    }
+
+    fn parse_unit(&mut self) -> UnitExpr {
+        let base = self.parse_unit_base();
+        if let Some(exponent) = self.parse_unit_exponent() {
+            return UnitExpr::Power { base: Box::new(base), exponent }
+        }
+        base
+    }
+
+    fn parse_unit_expr(&mut self) -> UnitExpr {
+        let mut node = self.parse_unit();
+
+        while let Some(token) = self.peek() {
+            let op;
+            match token {
+                Token::Dot => {
+                    self.advance();
+                    op = UnitOp::Multiply;
+                },
+                Token::Slash => {
+                    self.advance();
+                    op = UnitOp::Divide;
+                },
+                _ => break,
+            }
+            let right = self.parse_unit();
+            node = UnitExpr::Binary { left: Box::new(node), op, right: Box::new(right) };
+        }
+        node
+    }
+
     fn parse_statement(&mut self) -> Option<Stmt> {
         match self.peek()? {
             // TODO: Move this somewhere...
@@ -100,16 +152,11 @@ impl Parser {
                 if let Some(Token::Colon) = self.peek() {
                     self.advance();
 
-                    if let Some(Token::Identifier(u)) = self.peek() {
-                        unit = Some(UnitExpr::Symbol(u.clone()))
-                        // TODO: Parse units with *, /, etc. recursively
-                        } else {
+                    if let Some(Token::Identifier(_)) = self.peek() {
+                        unit = Some(self.parse_unit_expr());
+                    } else {
                         panic!("Expected unit after ':'")
                     };
-                }
-
-                if unit.is_some() {
-                    self.advance();
                 }
 
                 if let Some(Token::Equal) = self.advance() {
@@ -122,5 +169,9 @@ impl Parser {
             }
             _ => None,
         }
+    }
+
+    pub fn parse(&mut self) -> Option<Stmt> {
+        self.parse_statement()
     }
 }

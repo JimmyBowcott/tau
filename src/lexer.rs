@@ -31,6 +31,14 @@ pub struct Lexer {
     chars: Vec<char>,
 }
 
+impl Iterator for Lexer {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_token()
+    }
+}
+
 impl Lexer {
     pub fn new(input: &str) -> Self {
         Self {
@@ -106,7 +114,7 @@ impl Lexer {
         }
     }
 
-    pub fn next(&mut self) -> Option<Token> {
+    pub fn next_token(&mut self) -> Option<Token> {
         self.next_word();
         let ch = self.advance()?;
 
