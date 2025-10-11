@@ -20,8 +20,8 @@ pub enum Token {
     Dot,
     Slash,
     Caret,
-    LParenthesis,
-    RParenthesis,
+    LParen,
+    RParen,
     LBrace,
     RBrace,
 }
@@ -128,8 +128,8 @@ impl Lexer {
             '.' => Some(Token::Dot),
             '/' => Some(Token::Slash),
             '^' => Some(Token::Caret),
-            '(' => Some(Token::LParenthesis),
-            ')' => Some(Token::RParenthesis),
+            '(' => Some(Token::LParen),
+            ')' => Some(Token::RParen),
             '{' => Some(Token::LBrace),
             '}' => Some(Token::RBrace),
             c if c.is_ascii_digit() => {
