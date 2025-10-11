@@ -1,30 +1,4 @@
-#[derive(Debug, Clone, PartialEq)]
-pub enum Token {
-    Let,
-    Const,
-    Fn,
-    Return,
-    If,
-    Else,
-    For,
-    While,
-    Print,
-    Identifier(String),
-    Number(f64),
-    Colon,
-    Equal,
-    Semicolon,
-    Plus,
-    Minus,
-    Star,
-    Dot,
-    Slash,
-    Caret,
-    LParen,
-    RParen,
-    LBrace,
-    RBrace,
-}
+use crate::token::Token;
 
 pub struct Lexer {
     position: usize,
