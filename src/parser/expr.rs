@@ -1,19 +1,43 @@
-use crate::{ast::{BinaryOp, Expr}, token::Token};
+use crate::{
+    ast::{BinaryOp, Expr},
+    token::Token,
+};
 
 use super::Parser;
 
 impl Parser {
     pub fn parse_expr(&mut self) -> Expr {
-        let mut res = self.parse_primary();
+        self.parse_expr_bp(0)
+    }
 
-        while let Some(op) = self.parse_operator() {
-            res = Expr::Binary {
-                left: Box::new(res),
-                op,
-                right: Box::new(self.parse_primary()),
+    fn parse_expr_bp(&mut self, min_bp: u8) -> Expr {
+        let mut lhs = self.parse_primary();
+
+        loop {
+            let op = match self.peek() {
+                Some(Token::Plus) => (1, 2, BinaryOp::Add),
+                Some(Token::Minus) => (1, 2, BinaryOp::Subtract),
+                Some(Token::Star) => (3, 4, BinaryOp::Multiply),
+                Some(Token::Slash) => (3, 4, BinaryOp::Divide),
+                Some(Token::Caret) => (5, 4, BinaryOp::Power),
+                _ => break,
+            };
+
+            let (lbp, rbp, bop) = op;
+            if lbp < min_bp {
+                break;
             }
+
+            self.advance();
+            let rhs = self.parse_expr_bp(rbp);
+            lhs = Expr::Binary {
+                left: Box::new(lhs),
+                op: bop,
+                right: Box::new(rhs),
+            };
         }
-        res
+
+        lhs
     }
 
     fn parse_primary(&mut self) -> Expr {
@@ -31,31 +55,5 @@ impl Parser {
             _ => panic!("Expected number or variable"),
         };
         res
-    }
-
-    fn parse_operator(&mut self) -> Option<BinaryOp> {
-        if let Some(token) = self.peek() {
-            match token {
-                Token::Plus => {
-                    self.advance();
-                    return Some(BinaryOp::Add);
-                }
-                Token::Minus => {
-                    self.advance();
-                    return Some(BinaryOp::Subtract);
-                }
-                Token::Star => {
-                    self.advance();
-                    return Some(BinaryOp::Multiply);
-                }
-                Token::Slash => {
-                    self.advance();
-                    return Some(BinaryOp::Divide);
-                }
-                _ => return None,
-            }
-        } else {
-            panic!("Expected ;")
-        }
     }
 }
