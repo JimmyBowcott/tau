@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Stmt, UnitExpr},
+    ast::{Expr, Stmt, UnitExpr},
     token::Token,
 };
 
@@ -9,6 +9,7 @@ impl Parser {
     pub fn parse_stmt(&mut self) -> Option<Stmt> {
         match self.peek()? {
             Token::Let => self.parse_let_stmt(),
+            Token::Print => self.parse_print_stmt(),
             _ => None,
         }
     }
@@ -51,6 +52,20 @@ impl Parser {
         self.expect_token(Token::Equal, "Expected expression after '='");
         let value = self.parse_expr();
 
-        Some(Stmt::VariableDecl { name, unit, value })
+        Some(Stmt::Let { name, unit, value })
+    }
+
+    fn parse_print_stmt(&mut self) -> Option<Stmt> {
+        self.advance();
+        let expr: Expr;
+
+        if let Some(Token::Identifier(name)) = self.peek() {
+            expr = Expr::Identifier(name.clone());
+            self.advance();
+        } else {
+            expr = self.parse_expr();
+        }
+
+        Some(Stmt::Print(expr))
     }
 }
