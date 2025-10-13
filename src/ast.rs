@@ -15,7 +15,6 @@ pub enum BinaryOp {
 pub enum UnitOp {
     Multiply,
     Divide,
-    Power,
 }
 
 #[derive(Debug, Clone)]
@@ -86,7 +85,7 @@ impl Stmt {
             Stmt::Expr(expr) => {
                 expr.eval(env);
             }
-            Stmt::Let { name, unit, value } => {
+            Stmt::Let { name, value, .. } => {
                 let val = value.eval(env);
                 env.vars.insert(name.clone(), val);
             }

@@ -12,11 +12,11 @@ impl Parser {
                 Token::Dot => {
                     self.advance();
                     op = UnitOp::Multiply;
-                }
+                },
                 Token::Slash => {
                     self.advance();
                     op = UnitOp::Divide;
-                }
+                },
                 _ => break,
             }
             let right = self.parse_unit();

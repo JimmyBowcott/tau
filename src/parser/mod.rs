@@ -2,11 +2,8 @@ pub mod expr;
 pub mod stmt;
 pub mod unit;
 
-use crate::ast::{Expr, Stmt, UnitExpr};
+use crate::ast::Stmt;
 use crate::token::Token;
-use expr::*;
-use stmt::*;
-use unit::*;
 
 pub struct Parser {
     tokens: Vec<Token>,
