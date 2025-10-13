@@ -1,12 +1,4 @@
-use lexer::Lexer;
-use parser::Parser;
-use runtime::Env;
-
-mod ast;
-mod lexer;
-mod parser;
-mod token;
-mod runtime;
+use tau::{lexer::Lexer,parser::Parser, runtime::Env };
 
 fn run(source: &str) {
     let lexer = Lexer::new(source);

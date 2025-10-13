@@ -1,5 +1,3 @@
-use std::fmt;
-
 use crate::runtime::Env;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
