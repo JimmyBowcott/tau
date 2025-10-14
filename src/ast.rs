@@ -15,7 +15,7 @@ pub enum UnitOp {
     Divide,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Number(f64),
     Identifier(String),
@@ -26,7 +26,7 @@ pub enum Expr {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum UnitExpr {
     Symbol(String),
     Power {
@@ -40,7 +40,7 @@ pub enum UnitExpr {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Stmt {
     Expr(Expr),
     Let {
@@ -92,5 +92,64 @@ impl Stmt {
                 println!("{}", val);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::runtime::Env;
+    use crate::ast::{Expr, BinaryOp, Stmt};
+
+    fn env() -> Env {
+        Env::new()
+    }
+
+    #[test]
+    fn eval_number() {
+        let mut env = env();
+        let expr = Expr::Number(42.0);
+        assert_eq!(expr.eval(&mut env), 42.0);
+    }
+
+    #[test]
+    fn eval_binary_add() {
+        let mut env = env();
+        let expr = Expr::Binary {
+            left: Box::new(Expr::Number(2.0)),
+            op: BinaryOp::Add,
+            right: Box::new(Expr::Number(3.0)),
+        };
+        assert_eq!(expr.eval(&mut env), 5.0);
+    }
+
+    #[test]
+    fn eval_binary_power() {
+        let mut env = env();
+        let expr = Expr::Binary {
+            left: Box::new(Expr::Number(2.0)),
+            op: BinaryOp::Power,
+            right: Box::new(Expr::Number(3.0)),
+        };
+        assert_eq!(expr.eval(&mut env), 8.0);
+    }
+
+    #[test]
+    fn eval_identifier() {
+        let mut env = env();
+        env.vars.insert("x".to_string(), 7.0);
+        let expr = Expr::Identifier("x".into());
+        assert_eq!(expr.eval(&mut env), 7.0);
+    }
+
+    #[test]
+    fn exec_let_statement() {
+        let mut env = env();
+        let stmt = Stmt::Let {
+            name: "x".into(),
+            value: Expr::Number(10.0),
+            unit: None,
+        };
+        stmt.exec(&mut env);
+        assert_eq!(*env.vars.get("x").unwrap(), 10.0);
     }
 }
