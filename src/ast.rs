@@ -1,4 +1,4 @@
-use crate::runtime::Env;
+use crate::{analysis::Analyser, runtime::Env};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOp {
@@ -75,6 +75,17 @@ impl Expr {
             }
         }
     }
+
+    pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), String> {
+        match self {
+            Expr::Number(_) => Ok(()),
+            Expr::Identifier(name) => ctx.symbols.check_declared(name),
+            Expr::Binary { left, right, .. } => {
+                left.analyse(ctx)?;
+                right.analyse(ctx)
+            }
+        }
+    }
 }
 
 impl Stmt {
@@ -93,12 +104,26 @@ impl Stmt {
             }
         }
     }
+
+    pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), String> {
+        match self {
+            Stmt::Let { name, value, .. } => {
+                ctx.symbols.declare(name)?;
+                value.analyse(ctx)?;
+                ctx.symbols.define(name);
+                Ok(())
+            }
+            Stmt::Print(expr) | Stmt::Expr(expr) => {
+                expr.analyse(ctx)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::{BinaryOp, Expr, Stmt};
     use crate::runtime::Env;
-    use crate::ast::{Expr, BinaryOp, Stmt};
 
     fn env() -> Env {
         Env::new()
