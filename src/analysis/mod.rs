@@ -1,16 +1,20 @@
 mod symbols;
+mod units;
 pub use symbols::*;
+use units::UnitTable;
 
 use crate::ast::Stmt;
 
 pub struct Analyser {
     pub symbols: SymbolTable,
+    pub units: UnitTable,
 }
 
 impl Analyser {
     pub fn new() -> Self {
         Self {
             symbols: SymbolTable::new(),
+            units: UnitTable::new(),
         }
     }
 

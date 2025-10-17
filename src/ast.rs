@@ -76,13 +76,26 @@ impl Expr {
         }
     }
 
-    pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), String> {
+    pub fn validate(&self, ctx: &mut Analyser) -> Result<(), String> {
         match self {
             Expr::Number(_) => Ok(()),
             Expr::Identifier(name) => ctx.symbols.check_declared(name),
             Expr::Binary { left, right, .. } => {
-                left.analyse(ctx)?;
-                right.analyse(ctx)
+                left.validate(ctx)?;
+                right.validate(ctx)
+            }
+        }
+    }
+}
+
+impl UnitExpr {
+    pub fn validate(&self, ctx: &mut Analyser) -> Result<(), String> {
+        match self {
+            UnitExpr::Symbol(s) => ctx.units.validate_base(s),
+            UnitExpr::Power { base, .. } => base.validate(ctx),
+            UnitExpr::Binary { left, right, .. } => {
+                left.validate(ctx)?;
+                right.validate(ctx)
             }
         }
     }
@@ -107,14 +120,15 @@ impl Stmt {
 
     pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), String> {
         match self {
-            Stmt::Let { name, value, .. } => {
+            Stmt::Let { name, value, unit } => {
                 ctx.symbols.declare(name)?;
-                value.analyse(ctx)?;
+                if let Some(unit) = unit { unit.validate(ctx)?; }
+                value.validate(ctx)?;
                 ctx.symbols.define(name);
                 Ok(())
             }
             Stmt::Print(expr) | Stmt::Expr(expr) => {
-                expr.analyse(ctx)
+                expr.validate(ctx)
             }
         }
     }
