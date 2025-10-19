@@ -91,7 +91,7 @@ impl Expr {
 impl UnitExpr {
     pub fn validate(&self, ctx: &mut Analyser) -> Result<(), String> {
         match self {
-            UnitExpr::Symbol(s) => ctx.units.validate_base(s),
+            UnitExpr::Symbol(s) => ctx.units.validate(s),
             UnitExpr::Power { base, .. } => base.validate(ctx),
             UnitExpr::Binary { left, right, .. } => {
                 left.validate(ctx)?;

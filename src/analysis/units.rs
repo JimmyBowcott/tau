@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Dimension {
@@ -45,60 +45,53 @@ impl Dimension {
 }
 
 pub struct UnitTable {
-    base_units: HashSet<String>,
-    derived_to_base: HashMap<String, Dimension>,
-    base_to_derived: HashMap<[i8; 7], String>,
+    name_to_base_components: HashMap<&'static str, Dimension>,
+    base_components_to_name: HashMap<[i8; 7], &'static str>,
 }
 
 impl UnitTable {
     pub fn new() -> Self {
-        let mut derived_to_base = HashMap::new();
-        let mut base_to_derived = HashMap::new();
+        let mut name_to_base_components = HashMap::new();
+        let mut base_components_to_name = HashMap::new();
 
         macro_rules! unit {
             ($name:expr, [$($e:expr),*]) => {{
                 let dim = Dimension::new([$($e),*]);
-                derived_to_base.insert($name, dim.clone());
-                base_to_derived.insert(dim.exponents, $name);
+                name_to_base_components.insert($name, dim.clone());
+                base_components_to_name.insert(dim.exponents, $name);
             }};
         }
 
         // Base units
-        unit!("kg".to_string(), [1, 0, 0, 0, 0, 0, 0]);
-        unit!("m".to_string(),  [0, 1, 0, 0, 0, 0, 0]);
-        unit!("s".to_string(),  [0, 0, 1, 0, 0, 0, 0]);
-        unit!("A".to_string(),  [0, 0, 0, 1, 0, 0, 0]);
-        unit!("K".to_string(),  [0, 0, 0, 0, 1, 0, 0]);
-        unit!("mol".to_string(),[0, 0, 0, 0, 0, 1, 0]);
-        unit!("cd".to_string(), [0, 0, 0, 0, 0, 0, 1]);
+        unit!("kg", [1, 0, 0, 0, 0, 0, 0]);
+        unit!("m",  [0, 1, 0, 0, 0, 0, 0]);
+        unit!("s",  [0, 0, 1, 0, 0, 0, 0]);
+        unit!("A",  [0, 0, 0, 1, 0, 0, 0]);
+        unit!("K",  [0, 0, 0, 0, 1, 0, 0]);
+        unit!("mol", [0, 0, 0, 0, 0, 1, 0]);
+        unit!("cd", [0, 0, 0, 0, 0, 0, 1]);
 
         // Derived units
-        unit!("N".to_string(),  [1, 1, -2, 0, 0, 0, 0]); // kg·m/s²
-        unit!("J".to_string(),  [1, 2, -2, 0, 0, 0, 0]); // N·m
-        unit!("W".to_string(),  [1, 2, -3, 0, 0, 0, 0]); // J/s
-        unit!("Pa".to_string(), [1, -1, -2, 0, 0, 0, 0]); // N/m²
-        unit!("C".to_string(),  [0, 0, 1, 1, 0, 0, 0]); // A·s
-        unit!("V".to_string(),  [1, 2, -3, -1, 0, 0, 0]); // W/A
-        unit!("Ω".to_string(),  [1, 2, -3, -2, 0, 0, 0]); // V/A
-                                                          //
-        let valid_units = ["m", "s", "kg", "A", "K", "mol", "cd"];
-        let mut base_units = HashSet::new();
-        valid_units.iter().for_each(|unit| {
-            base_units.insert(unit.to_string());
-        });
+        unit!("N",  [1, 1, -2, 0, 0, 0, 0]); // kg·m/s²
+        unit!("J",  [1, 2, -2, 0, 0, 0, 0]); // N·m
+        unit!("W",  [1, 2, -3, 0, 0, 0, 0]); // J/s
+        unit!("Pa", [1, -1, -2, 0, 0, 0, 0]); // N/m²
+        unit!("C",  [0, 0, 1, 1, 0, 0, 0]); // A·s
+        unit!("V",  [1, 2, -3, -1, 0, 0, 0]); // W/A
+        unit!("Ω",  [1, 2, -3, -2, 0, 0, 0]); // V/A
 
-        Self { base_units, derived_to_base, base_to_derived }
+        Self { name_to_base_components, base_components_to_name }
     }
 
-    // pub fn simplify(&self, dim: &Dimension) -> &'static str {
-    //     self.base_to_derived
-    //         .get(&dim.exponents)
-    //         .copied()
-    //         .unwrap_or("unknown")
-    // }
+    pub fn simplify(&self, dim: &Dimension) -> &'static str {
+        self.base_components_to_name
+            .get(&dim.exponents)
+            .copied()
+            .unwrap_or("unknown")
+    }
 
-    pub fn validate_base(&self, value: &String) -> Result<(), String> {
-        if self.base_units.contains(value) {
+    pub fn validate(&self, value: &String) -> Result<(), String> {
+        if self.name_to_base_components.contains_key(value.as_str()) {
             Ok(())
         } else {
             Err(format!("Invalid SI unit: '{}'", value))
@@ -113,15 +106,17 @@ mod tests {
     #[test]
     fn validates_known_units() {
         let analyzer = UnitTable::new();
-        assert!(analyzer.validate_base(&"m".to_string()).is_ok());
-        assert!(analyzer.validate_base(&"kg".to_string()).is_ok());
-        assert!(analyzer.validate_base(&"s".to_string()).is_ok());
+        assert!(analyzer.validate(&"m".to_string()).is_ok());
+        assert!(analyzer.validate(&"kg".to_string()).is_ok());
+        assert!(analyzer.validate(&"s".to_string()).is_ok());
+        assert!(analyzer.validate(&"N".to_string()).is_ok());
+        assert!(analyzer.validate(&"Pa".to_string()).is_ok());
     }
 
     #[test]
     fn rejects_invalid_units() {
         let analyzer = UnitTable::new();
-        assert!(analyzer.validate_base(&"lightyear".to_string()).is_err());
-        assert!(analyzer.validate_base(&"wat".to_string()).is_err());
+        assert!(analyzer.validate(&"lightyear".to_string()).is_err());
+        assert!(analyzer.validate(&"wat".to_string()).is_err());
     }
 }
