@@ -1,18 +1,32 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
-pub struct Dimension {
+pub struct Unit {
     /// Represented as [kg, m, s, A, K, mol, cd]
     pub exponents: [i8; 7],
+    pub allows_prefix: bool,
 }
 
-impl Dimension {
+impl Unit {
     pub fn new(exponents: [i8; 7]) -> Self {
-        Self { exponents }
+        Self {
+            exponents,
+            allows_prefix: true,
+        }
+    }
+
+    pub fn with_prefix(exponents: [i8; 7], allows_prefix: bool) -> Self {
+        Self {
+            exponents,
+            allows_prefix,
+        }
     }
 
     pub fn base() -> Self {
-        Self { exponents: [0; 7] }
+        Self {
+            exponents: [0; 7],
+            allows_prefix: false,
+        }
     }
 
     pub fn add(&self, other: &Self) -> Self {
@@ -45,8 +59,9 @@ impl Dimension {
 }
 
 pub struct UnitTable {
-    name_to_base_components: HashMap<&'static str, Dimension>,
+    name_to_base_components: HashMap<&'static str, Unit>,
     base_components_to_name: HashMap<[i8; 7], &'static str>,
+    prefixes: HashSet<&'static str>,
 }
 
 impl UnitTable {
@@ -56,46 +71,93 @@ impl UnitTable {
 
         macro_rules! unit {
             ($name:expr, [$($e:expr),*]) => {{
-                let dim = Dimension::new([$($e),*]);
+                let dim = Unit::new([$($e),*]);
+                name_to_base_components.insert($name, dim.clone());
+                base_components_to_name.insert(dim.exponents, $name);
+            }};
+            ($name:expr, [$($e:expr),*], $allows_prefix:expr) => {{
+                let dim = Unit::with_prefix([$($e),*], $allows_prefix);
                 name_to_base_components.insert($name, dim.clone());
                 base_components_to_name.insert(dim.exponents, $name);
             }};
         }
 
-        // Base units
-        unit!("kg", [1, 0, 0, 0, 0, 0, 0]);
-        unit!("m",  [0, 1, 0, 0, 0, 0, 0]);
-        unit!("s",  [0, 0, 1, 0, 0, 0, 0]);
-        unit!("A",  [0, 0, 0, 1, 0, 0, 0]);
-        unit!("K",  [0, 0, 0, 0, 1, 0, 0]);
+        unit!("kg", [1, 0, 0, 0, 0, 0, 0], false);
+        unit!("m", [0, 1, 0, 0, 0, 0, 0]);
+        unit!("s", [0, 0, 1, 0, 0, 0, 0], false);
+        unit!("A", [0, 0, 0, 1, 0, 0, 0]);
+        unit!("K", [0, 0, 0, 0, 1, 0, 0]);
         unit!("mol", [0, 0, 0, 0, 0, 1, 0]);
         unit!("cd", [0, 0, 0, 0, 0, 0, 1]);
 
-        // Derived units
-        unit!("N",  [1, 1, -2, 0, 0, 0, 0]); // kg·m/s²
-        unit!("J",  [1, 2, -2, 0, 0, 0, 0]); // N·m
-        unit!("W",  [1, 2, -3, 0, 0, 0, 0]); // J/s
-        unit!("Pa", [1, -1, -2, 0, 0, 0, 0]); // N/m²
-        unit!("C",  [0, 0, 1, 1, 0, 0, 0]); // A·s
-        unit!("V",  [1, 2, -3, -1, 0, 0, 0]); // W/A
-        unit!("Ω",  [1, 2, -3, -2, 0, 0, 0]); // V/A
+        unit!("rad", [0, 0, 0, 0, 0, 0, 0]);
+        unit!("sr", [0, 0, 0, 0, 0, 0, 0]);
+        unit!("Hz", [0, 0, -1, 0, 0, 0, 0]);
+        unit!("N", [1, 1, -2, 0, 0, 0, 0]);
+        unit!("Pa", [1, -1, -2, 0, 0, 0, 0]);
+        unit!("J", [1, 2, -2, 0, 0, 0, 0]);
+        unit!("W", [1, 2, -3, 0, 0, 0, 0]);
+        unit!("C", [0, 0, 1, 1, 0, 0, 0]);
+        unit!("V", [1, 2, -3, -1, 0, 0, 0]);
+        unit!("F", [-1, -2, 4, 2, 0, 0, 0]);
+        unit!("Ω", [1, 2, -3, -2, 0, 0, 0]);
+        unit!("S", [-1, -2, 3, 2, 0, 0, 0]);
+        unit!("Wb", [1, 2, -2, -1, 0, 0, 0]);
+        unit!("T", [1, 0, -2, -1, 0, 0, 0]);
+        unit!("H", [1, 2, -2, -2, 0, 0, 0]);
+        unit!("lm", [0, 0, 0, 0, 0, 0, 1]);
+        unit!("lx", [0, -2, 0, 0, 0, 0, 1]);
+        unit!("Bq", [0, 0, -1, 0, 0, 0, 0]);
+        unit!("Gy", [0, 2, -2, 0, 0, 0, 0]);
+        unit!("Sv", [0, 2, -2, 0, 0, 0, 0]);
+        unit!("kat", [0, 0, -1, 0, 0, 1, 0]);
 
-        Self { name_to_base_components, base_components_to_name }
+        let prefixes: HashSet<&'static str> = [
+            "Y", "Z", "E", "P", "T", "G", "M", "k", "h", "da", "d", "c", "m", "u", "µ", "n", "p",
+            "f", "a", "z", "y",
+        ]
+        .into_iter()
+        .collect();
+
+        Self {
+            name_to_base_components,
+            base_components_to_name,
+            prefixes,
+        }
     }
 
-    pub fn simplify(&self, dim: &Dimension) -> &'static str {
+    pub fn simplify(&self, dim: &Unit) -> &'static str {
         self.base_components_to_name
             .get(&dim.exponents)
             .copied()
             .unwrap_or("unknown")
     }
 
-    pub fn validate(&self, value: &String) -> Result<(), String> {
-        if self.name_to_base_components.contains_key(value.as_str()) {
-            Ok(())
-        } else {
-            Err(format!("Invalid SI unit: '{}'", value))
+    pub fn validate(&self, value: &str) -> Result<(), String> {
+        if self.name_to_base_components.contains_key(value) {
+            return Ok(());
         }
+
+        if let Some((prefix, base)) = self.split_prefix(value) {
+            let unit_info = self
+                .name_to_base_components
+                .get(base)
+                .ok_or_else(|| format!("Unknown unit '{}'", base))?;
+
+            if unit_info.allows_prefix {
+                Ok(())
+            } else {
+                Err(format!("Prefix '{}' not allowed for '{}'", prefix, base))
+            }
+        } else {
+            Err(format!("Unknown unit '{}'", value))
+        }
+    }
+
+    fn split_prefix<'a>(&self, value: &'a str) -> Option<(&'a str, &'a str)> {
+        self.prefixes
+            .iter()
+            .find_map(|prefix| value.strip_prefix(prefix).map(|rest| (*prefix, rest)))
     }
 }
 
@@ -111,6 +173,24 @@ mod tests {
         assert!(analyzer.validate(&"s".to_string()).is_ok());
         assert!(analyzer.validate(&"N".to_string()).is_ok());
         assert!(analyzer.validate(&"Pa".to_string()).is_ok());
+    }
+
+    #[test]
+    fn validates_valid_combinations() {
+        let analyzer = UnitTable::new();
+        assert!(analyzer.validate(&"µm".to_string()).is_ok());
+        assert!(analyzer.validate(&"MJ".to_string()).is_ok());
+        assert!(analyzer.validate(&"kN".to_string()).is_ok());
+        assert!(analyzer.validate(&"GPa".to_string()).is_ok());
+    }
+
+    #[test]
+    fn does_not_validate_invalid_combinations() {
+        let analyzer = UnitTable::new();
+        assert!(analyzer.validate(&"ks".to_string()).is_err());
+        assert!(analyzer.validate(&"Ms".to_string()).is_err());
+        assert!(analyzer.validate(&"kkg".to_string()).is_err());
+        assert!(analyzer.validate(&"ukg".to_string()).is_err());
     }
 
     #[test]
