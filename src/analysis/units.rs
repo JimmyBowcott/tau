@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone)]
 pub struct Unit {
     /// Represented as [kg, m, s, A, K, mol, cd]
     pub exponents: [i8; 7],
     pub allows_prefix: bool,
+    pub scale: f64,
 }
 
 impl Unit {
@@ -12,6 +13,7 @@ impl Unit {
         Self {
             exponents,
             allows_prefix: true,
+            scale: 1.0,
         }
     }
 
@@ -19,6 +21,15 @@ impl Unit {
         Self {
             exponents,
             allows_prefix,
+            scale: 1.0,
+        }
+    }
+
+    pub fn with_scale(exponents: [i8; 7], scale: f64) -> Self {
+        Self {
+            exponents,
+            allows_prefix: true,
+            scale
         }
     }
 
@@ -26,6 +37,7 @@ impl Unit {
         Self {
             exponents: [0; 7],
             allows_prefix: false,
+            scale: 1.0,
         }
     }
 
@@ -82,13 +94,20 @@ impl UnitTable {
             }};
         }
 
-        unit!("kg", [1, 0, 0, 0, 0, 0, 0], false);
         unit!("m", [0, 1, 0, 0, 0, 0, 0]);
-        unit!("s", [0, 0, 1, 0, 0, 0, 0], false);
+        unit!("s", [0, 0, 1, 0, 0, 0, 0]);
         unit!("A", [0, 0, 0, 1, 0, 0, 0]);
         unit!("K", [0, 0, 0, 0, 1, 0, 0]);
         unit!("mol", [0, 0, 0, 0, 0, 1, 0]);
         unit!("cd", [0, 0, 0, 0, 0, 0, 1]);
+
+        let kg = Unit::with_prefix([1, 0, 0, 0, 0, 0 , 0], false);
+        name_to_base_components.insert("kg", kg.clone());
+        base_components_to_name.insert(kg.exponents, "kg");
+
+        let g = Unit::with_scale([1, 0, 0, 0, 0, 0 , 0], 0.01);
+        name_to_base_components.insert("g", g.clone());
+        base_components_to_name.insert(g.exponents, "g");
 
         unit!("rad", [0, 0, 0, 0, 0, 0, 0]);
         unit!("sr", [0, 0, 0, 0, 0, 0, 0]);
@@ -178,17 +197,16 @@ mod tests {
     #[test]
     fn validates_valid_combinations() {
         let analyzer = UnitTable::new();
-        assert!(analyzer.validate(&"µm".to_string()).is_ok());
+        assert!(analyzer.validate(&"mg".to_string()).is_ok());
         assert!(analyzer.validate(&"MJ".to_string()).is_ok());
         assert!(analyzer.validate(&"kN".to_string()).is_ok());
         assert!(analyzer.validate(&"GPa".to_string()).is_ok());
+        assert!(analyzer.validate(&"ms".to_string()).is_ok());
     }
 
     #[test]
     fn does_not_validate_invalid_combinations() {
         let analyzer = UnitTable::new();
-        assert!(analyzer.validate(&"ks".to_string()).is_err());
-        assert!(analyzer.validate(&"Ms".to_string()).is_err());
         assert!(analyzer.validate(&"kkg".to_string()).is_err());
         assert!(analyzer.validate(&"ukg".to_string()).is_err());
     }
