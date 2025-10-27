@@ -109,7 +109,7 @@ impl Stmt {
             }
             Stmt::Let { name, value, .. } => {
                 let val = value.eval(env);
-                env.vars.insert(name.clone(), val);
+                env.insert(name.clone(), val);
             }
             Stmt::Print(expr) => {
                 let val = expr.eval(env);

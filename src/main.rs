@@ -18,6 +18,6 @@ fn run(source: &str) -> Result<(), String> {
 }
 
 fn main() -> Result<(), String> {
-    run("let t = 5; let velocity: m/s = 0.5 * t^2 + 10 / (2 * t); print(velocity * 2);")?;
+    run("let t = 5; let velocity: m/s = 0.5; let g: m/s^2 = 9.81; print(velocity + g);")?;
     Ok(())
 }

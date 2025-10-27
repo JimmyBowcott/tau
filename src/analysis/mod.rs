@@ -1,5 +1,5 @@
 mod symbols;
-mod units;
+pub mod units;
 pub use symbols::*;
 use units::UnitTable;
 

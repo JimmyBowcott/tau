@@ -1,44 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-#[derive(Clone)]
-pub struct Unit {
-    /// Represented as [kg, m, s, A, K, mol, cd]
+#[derive(Debug, PartialEq, Clone)]
+pub struct Dimension {
     pub exponents: [i8; 7],
-    pub allows_prefix: bool,
-    pub scale: f64,
 }
 
-impl Unit {
+impl Dimension {
     pub fn new(exponents: [i8; 7]) -> Self {
-        Self {
-            exponents,
-            allows_prefix: true,
-            scale: 1.0,
-        }
-    }
-
-    pub fn with_prefix(exponents: [i8; 7], allows_prefix: bool) -> Self {
-        Self {
-            exponents,
-            allows_prefix,
-            scale: 1.0,
-        }
-    }
-
-    pub fn with_scale(exponents: [i8; 7], scale: f64) -> Self {
-        Self {
-            exponents,
-            allows_prefix: true,
-            scale
-        }
-    }
-
-    pub fn base() -> Self {
-        Self {
-            exponents: [0; 7],
-            allows_prefix: false,
-            scale: 1.0,
-        }
+        Self { exponents }
     }
 
     pub fn add(&self, other: &Self) -> Self {
@@ -64,9 +33,51 @@ impl Unit {
         }
         Self::new(result)
     }
+}
+
+#[derive(Clone)]
+pub struct Unit {
+    /// Represented as [kg, m, s, A, K, mol, cd]
+    pub dimension: Dimension,
+    pub allows_prefix: bool,
+    pub scale: f64,
+}
+
+impl Unit {
+    pub fn new(exponents: [i8; 7]) -> Self {
+        Self {
+            dimension: Dimension::new(exponents),
+            allows_prefix: true,
+            scale: 1.0,
+        }
+    }
+
+    pub fn with_prefix(exponents: [i8; 7], allows_prefix: bool) -> Self {
+        Self {
+            dimension: Dimension::new(exponents),
+            allows_prefix,
+            scale: 1.0,
+        }
+    }
+
+    pub fn with_scale(exponents: [i8; 7], scale: f64) -> Self {
+        Self {
+            dimension: Dimension::new(exponents),
+            allows_prefix: true,
+            scale
+        }
+    }
+
+    pub fn base() -> Self {
+        Self {
+            dimension: Dimension::new([0; 7]),
+            allows_prefix: false,
+            scale: 1.0,
+        }
+    }
 
     pub fn is_dimensionless(&self) -> bool {
-        self.exponents.iter().all(|&x| x == 0)
+        self.dimension.exponents.iter().all(|&x| x == 0)
     }
 }
 
@@ -85,7 +96,7 @@ impl UnitTable {
             ($name:expr, [$($e:expr),*]) => {{
                 let dim = Unit::new([$($e),*]);
                 name_to_base_components.insert($name, dim.clone());
-                base_components_to_name.insert(dim.exponents, $name);
+                base_components_to_name.insert(dim.dimension.exponents, $name);
             }};
             ($name:expr, [$($e:expr),*], $allows_prefix:expr) => {{
                 let dim = Unit::with_prefix([$($e),*], $allows_prefix);
@@ -103,11 +114,11 @@ impl UnitTable {
 
         let kg = Unit::with_prefix([1, 0, 0, 0, 0, 0 , 0], false);
         name_to_base_components.insert("kg", kg.clone());
-        base_components_to_name.insert(kg.exponents, "kg");
+        base_components_to_name.insert(kg.dimension.exponents, "kg");
 
         let g = Unit::with_scale([1, 0, 0, 0, 0, 0 , 0], 0.01);
         name_to_base_components.insert("g", g.clone());
-        base_components_to_name.insert(g.exponents, "g");
+        base_components_to_name.insert(g.dimension.exponents, "g");
 
         unit!("rad", [0, 0, 0, 0, 0, 0, 0]);
         unit!("sr", [0, 0, 0, 0, 0, 0, 0]);
@@ -147,7 +158,7 @@ impl UnitTable {
 
     pub fn simplify(&self, dim: &Unit) -> &'static str {
         self.base_components_to_name
-            .get(&dim.exponents)
+            .get(&dim.dimension.exponents)
             .copied()
             .unwrap_or("unknown")
     }
