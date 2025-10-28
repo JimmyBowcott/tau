@@ -1,4 +1,4 @@
-use crate::{analysis::Analyser, runtime::Env};
+use crate::{analysis::{units::Dimension, Analyser}, runtime::Env};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOp {
@@ -121,8 +121,14 @@ impl Stmt {
     pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), String> {
         match self {
             Stmt::Let { name, value, unit } => {
-                ctx.symbols.declare(name)?;
-                if let Some(unit) = unit { unit.validate(ctx)?; }
+                if let Some(u) = unit { u.validate(ctx)?; }
+
+                let dimension = match unit {
+                    Some(u) => ctx.get_dimension(u)?,
+                    None => Dimension::new([0; 7]),
+                };
+
+                ctx.symbols.declare(name, dimension)?;
                 value.validate(ctx)?;
                 ctx.symbols.define(name);
                 Ok(())

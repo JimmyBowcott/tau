@@ -1,5 +1,35 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::ast::{UnitExpr, UnitOp};
+
+use super::Analyser;
+
+impl Analyser {
+    pub fn get_dimension(&self, expr: &UnitExpr) -> Result<Dimension, String> {
+        match expr {
+            UnitExpr::Symbol(name) => {
+                let unit = self.units.get_dimension(name);
+                match unit {
+                    Some(u) => Ok(u),
+                    None => Err(format!("Unknown unit {}", name)),
+                }
+            }
+            UnitExpr::Binary { left, op, right } => {
+                let l = self.get_dimension(left)?;
+                let r = self.get_dimension(right)?;
+                Ok(match op {
+                    UnitOp::Multiply => l.add(&r),
+                    UnitOp::Divide => l.sub(&r),
+                })
+            }
+            UnitExpr::Power { base, exponent } => {
+                let b = self.get_dimension(base)?;
+                Ok(b.scale(*exponent))
+            }
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Dimension {
     pub exponents: [i8; 7],
@@ -64,7 +94,7 @@ impl Unit {
         Self {
             dimension: Dimension::new(exponents),
             allows_prefix: true,
-            scale
+            scale,
         }
     }
 
@@ -112,11 +142,11 @@ impl UnitTable {
         unit!("mol", [0, 0, 0, 0, 0, 1, 0]);
         unit!("cd", [0, 0, 0, 0, 0, 0, 1]);
 
-        let kg = Unit::with_prefix([1, 0, 0, 0, 0, 0 , 0], false);
+        let kg = Unit::with_prefix([1, 0, 0, 0, 0, 0, 0], false);
         name_to_base_components.insert("kg", kg.clone());
         base_components_to_name.insert(kg.dimension.exponents, "kg");
 
-        let g = Unit::with_scale([1, 0, 0, 0, 0, 0 , 0], 0.01);
+        let g = Unit::with_scale([1, 0, 0, 0, 0, 0, 0], 0.01);
         name_to_base_components.insert("g", g.clone());
         base_components_to_name.insert(g.dimension.exponents, "g");
 
@@ -181,6 +211,13 @@ impl UnitTable {
             }
         } else {
             Err(format!("Unknown unit '{}'", value))
+        }
+    }
+
+    pub fn get_dimension(&self, name: &str) -> Option<Dimension> {
+        match self.name_to_base_components.get(name) {
+            Some(unit) => Some(unit.dimension.clone()),
+            None => None,
         }
     }
 
