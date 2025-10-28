@@ -67,7 +67,7 @@ impl Expr {
                 }
             }
             Expr::Identifier(name) => {
-                if let Some(value) = env.vars.get(name) {
+                if let Some(value) = env.get(name) {
                     *value
                 } else {
                     panic!("Unknown variable {}", name);
@@ -175,7 +175,7 @@ mod tests {
     #[test]
     fn eval_identifier() {
         let mut env = env();
-        env.vars.insert("x".to_string(), 7.0);
+        env.insert("x".to_string(), 7.0);
         let expr = Expr::Identifier("x".into());
         assert_eq!(expr.eval(&mut env), 7.0);
     }
@@ -189,6 +189,6 @@ mod tests {
             unit: None,
         };
         stmt.exec(&mut env);
-        assert_eq!(*env.vars.get("x").unwrap(), 10.0);
+        assert_eq!(*env.get("x").unwrap(), 10.0);
     }
 }
