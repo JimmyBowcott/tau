@@ -265,4 +265,83 @@ mod tests {
         assert!(analyzer.validate(&"lightyear".to_string()).is_err());
         assert!(analyzer.validate(&"wat".to_string()).is_err());
     }
+
+    #[test]
+    fn test_symbol() {
+        let ctx = Analyser::new();
+        let expr = UnitExpr::Symbol("m".to_string());
+        let dim = ctx.get_dimension(&expr).unwrap();
+        assert_eq!(dim, Dimension::new([0, 1, 0, 0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn test_multiply() {
+        let ctx = Analyser::new();
+        let expr = UnitExpr::Binary {
+            left: Box::new(UnitExpr::Symbol("A".to_string())),
+            op: UnitOp::Multiply,
+            right: Box::new(UnitExpr::Symbol("s".to_string())),
+        };
+        let dim = ctx.get_dimension(&expr).unwrap();
+        assert_eq!(dim, Dimension::new([0, 0, 1, 1, 0, 0, 0]));
+    }
+
+    #[test]
+    fn test_divide() {
+        let ctx = Analyser::new();
+        let expr = UnitExpr::Binary {
+            left: Box::new(UnitExpr::Symbol("m".to_string())),
+            op: UnitOp::Divide,
+            right: Box::new(UnitExpr::Symbol("s".to_string())),
+        };
+        let dim = ctx.get_dimension(&expr).unwrap();
+        assert_eq!(dim, Dimension::new([0, 1, -1, 0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn test_power() {
+        let ctx = Analyser::new();
+        let expr = UnitExpr::Power {
+            base: Box::new(UnitExpr::Symbol("cd".to_string())),
+            exponent: 2.0,
+        };
+        let dim = ctx.get_dimension(&expr).unwrap();
+        assert_eq!(dim, Dimension::new([0, 0, 0, 0, 0, 0, 2]));
+    }
+
+    #[test]
+    fn test_derived_symbol() {
+        let ctx = Analyser::new();
+        let expr = UnitExpr::Symbol("N".to_string());
+        let dim = ctx.get_dimension(&expr).unwrap();
+        assert_eq!(dim, Dimension::new([1, 1, -2, 0, 0, 0, 0]));
+    }
+
+
+    #[test]
+    fn test_complex_expr() {
+        let ctx = Analyser::new();
+        // m^2 / s^2
+        let expr = UnitExpr::Binary {
+            left: Box::new(UnitExpr::Power {
+                base: Box::new(UnitExpr::Symbol("N".to_string())),
+                exponent: 2.0,
+            }),
+            op: UnitOp::Multiply,
+            right: Box::new(UnitExpr::Power {
+                base: Box::new(UnitExpr::Symbol("m".to_string())),
+                exponent: 2.0,
+            }),
+        };
+        let dim = ctx.get_dimension(&expr).unwrap();
+        assert_eq!(dim, Dimension::new([2, 4, -4, 0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn test_unknown_unit() {
+        let ctx = Analyser::new();
+        let expr = UnitExpr::Symbol("foo".to_string());
+        let res = ctx.get_dimension(&expr);
+        assert!(res.is_err());
+    }
 }
