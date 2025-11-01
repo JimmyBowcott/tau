@@ -8,11 +8,11 @@ fn test_simple_tokens() {
     assert_eq!(
         tokens,
         vec![
-            Token::Let,
-            Token::Identifier("x".into()),
-            Token::Equal,
-            Token::Number(42.0),
-            Token::Semicolon,
+            Token::new(Let),
+            Token::new(Identifier(r)),
+            Token::new(Equal),
+            Token::new(Number(r)),
+            Token::new(Semicolon),
         ]
     );
 }
@@ -25,14 +25,14 @@ fn test_numbers_and_identifiers() {
     assert_eq!(
         tokens,
         vec![
-            Token::Identifier("mass".into()),
-            Token::Equal,
-            Token::Number(1.5e-3),
-            Token::Semicolon,
-            Token::Identifier("velocity".into()),
-            Token::Equal,
-            Token::Number(3.14),
-            Token::Semicolon,
+            Token::new(Identifier(r)),
+            Token::new(Equal),
+            Token::new(Number(r)),
+            Token::new(Semicolon),
+            Token::new(Identifier(r)),
+            Token::new(Equal),
+            Token::new(Number(r)),
+            Token::new(Semicolon),
         ]
     );
 }
@@ -43,9 +43,9 @@ fn test_symbols() {
     let tokens: Vec<_> = Lexer::new(input).collect();
 
     let expected = vec![
-        Token::Plus, Token::Minus, Token::Star, Token::Slash, Token::Caret,
-        Token::Colon, Token::Semicolon, Token::LParen, Token::RParen,
-        Token::LBrace, Token::RBrace,
+        Token::new(Plus), Token::new(Minus), Token::new(Star), Token::new(Slash), Token::new(Caret),
+        Token::new(Colon), Token::new(Semicolon), Token::new(LParen), Token::new(RParen),
+        Token::new(LBrace), Token::new(RBrace),
     ];
 
     assert_eq!(tokens, expected);
@@ -57,9 +57,9 @@ fn test_keywords() {
     let tokens: Vec<_> = Lexer::new(input).collect();
 
     let expected = vec![
-        Token::Let,
-        Token::Print,
-        Token::Identifier("force".into()),
+        Token::new(Let),
+        Token::new(Print),
+        Token::new(Identifier(r)),
     ];
 
     assert_eq!(tokens, expected);
@@ -71,21 +71,21 @@ fn test_complex_expression() {
     let tokens: Vec<_> = Lexer::new(input).collect();
 
     let expected = vec![
-        Token::Let,
-        Token::Identifier("velocity".into()),
-        Token::Colon,
-        Token::Identifier("m".into()),
-        Token::Slash,
-        Token::Identifier("s".into()),
-        Token::Equal,
-        Token::Number(10.0),
-        Token::Slash,
-        Token::LParen,
-        Token::Number(2.0),
-        Token::Star,
-        Token::Identifier("t".into()),
-        Token::RParen,
-        Token::Semicolon,
+        Token::new(Let),
+        Token::new(Identifier(r)),
+        Token::new(Colon),
+        Token::new(Identifier(r)),
+        Token::new(Slash),
+        Token::new(Identifier(r)),
+        Token::new(Equal),
+        Token::new(Number(r)),
+        Token::new(Slash),
+        Token::new(LParen),
+        Token::new(Number(r)),
+        Token::new(Star),
+        Token::new(Identifier(r)),
+        Token::new(RParen),
+        Token::new(Semicolon),
     ];
 
     assert_eq!(tokens, expected);

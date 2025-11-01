@@ -3,7 +3,7 @@ pub mod stmt;
 pub mod unit;
 
 use crate::ast::Stmt;
-use crate::token::Token;
+use crate::token::{Token, TokenKind};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -19,7 +19,7 @@ impl Parser {
         let mut stmts = Vec::new();
         while !self.is_at_end() {
             if let Some(stmt) = self.parse_stmt() {
-                self.expect_token(Token::Semicolon, "Expected ';' after statement");
+                self.expect_token(TokenKind::Semicolon, "Expected ';' after statement");
                 stmts.push(stmt);
             } else {
                 break;

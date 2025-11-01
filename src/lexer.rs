@@ -1,7 +1,9 @@
-use crate::token::Token;
+use crate::token::{Token, TokenKind};
 
 pub struct Lexer {
     position: usize,
+    line: usize,
+    column: usize,
     chars: Vec<char>,
 }
 
@@ -17,6 +19,8 @@ impl Lexer {
     pub fn new(input: &str) -> Self {
         Self {
             position: 0,
+            line: 1,
+            column: 0,
             chars: input.chars().collect(),
         }
     }
@@ -31,7 +35,19 @@ impl Lexer {
         } else {
             let c = self.peek();
             self.position += 1;
+            self.set_line_col(c);
             c
+        }
+    }
+
+    fn set_line_col(&mut self, c: Option<char>) {
+        if let Some(chr) = c {
+            if chr == '\n' {
+                self.line += 1;
+                self.column = 0;
+            } else {
+                self.column += 1;
+            }
         }
     }
 
@@ -71,19 +87,19 @@ impl Lexer {
         res
     }
 
-    fn match_identifier(&self, identifier: String) -> Option<Token> {
+    fn match_identifier(&self, identifier: String) -> Option<TokenKind> {
         match identifier.as_str() {
-            "let" => Some(Token::Let),
-            "const" => Some(Token::Const),
-            "fn" => Some(Token::Fn),
-            "return" => Some(Token::Return),
-            "if" => Some(Token::If),
-            "else" => Some(Token::Else),
-            "for" => Some(Token::For),
-            "while" => Some(Token::While),
-            "print" => Some(Token::Print),
+            "let" => Some(TokenKind::Let),
+            "const" => Some(TokenKind::Const),
+            "fn" => Some(TokenKind::Fn),
+            "return" => Some(TokenKind::Return),
+            "if" => Some(TokenKind::If),
+            "else" => Some(TokenKind::Else),
+            "for" => Some(TokenKind::For),
+            "while" => Some(TokenKind::While),
+            "print" => Some(TokenKind::Print),
             _ => {
-                Some(Token::Identifier(identifier))
+                Some(TokenKind::Identifier(identifier))
             }
         }
     }
@@ -92,29 +108,33 @@ impl Lexer {
         self.next_word();
         let ch = self.advance()?;
 
-        match ch {
-            ':' => Some(Token::Colon),
-            '=' => Some(Token::Equal),
-            ';' => Some(Token::Semicolon),
-            '+' => Some(Token::Plus),
-            '-' => Some(Token::Minus),
-            '*' => Some(Token::Star),
-            '.' => Some(Token::Dot),
-            '/' => Some(Token::Slash),
-            '^' => Some(Token::Caret),
-            '(' => Some(Token::LParen),
-            ')' => Some(Token::RParen),
-            '{' => Some(Token::LBrace),
-            '}' => Some(Token::RBrace),
+        if let Some(kind) = match ch {
+            ':' => Some(TokenKind::Colon),
+            '=' => Some(TokenKind::Equal),
+            ';' => Some(TokenKind::Semicolon),
+            '+' => Some(TokenKind::Plus),
+            '-' => Some(TokenKind::Minus),
+            '*' => Some(TokenKind::Star),
+            '.' => Some(TokenKind::Dot),
+            '/' => Some(TokenKind::Slash),
+            '^' => Some(TokenKind::Caret),
+            '(' => Some(TokenKind::LParen),
+            ')' => Some(TokenKind::RParen),
+            '{' => Some(TokenKind::LBrace),
+            '}' => Some(TokenKind::RBrace),
             c if c.is_ascii_digit() => {
                 let num = self.scan_number(c);
-                Some(Token::Number(num.parse().unwrap()))
+                Some(TokenKind::Number(num.parse().unwrap()))
             }
             c if c.is_alphabetic() => {
                 let identifier = self.scan_identifier(c);
                 self.match_identifier(identifier)
             }
             _ => None,
+        } {
+            Some(Token::new(kind, self.line, self.column))
+        } else {
+            None
         }
     }
 }
@@ -183,43 +203,55 @@ mod tests {
     #[test]
     fn test_match_identifier_keywords() {
         let lexer = Lexer::new("");
-        assert_eq!(lexer.match_identifier("let".into()), Some(Token::Let));
-        assert_eq!(lexer.match_identifier("print".into()), Some(Token::Print));
+        assert_eq!(lexer.match_identifier("let".into()), Some(TokenKind::Let));
+        assert_eq!(lexer.match_identifier("print".into()), Some(TokenKind::Print));
     }
 
     #[test]
     fn test_match_identifier_non_keyword() {
         let lexer = Lexer::new("");
-        assert_eq!(lexer.match_identifier("force".into()), Some(Token::Identifier("force".into())));
+        assert_eq!(lexer.match_identifier("force".into()), Some(TokenKind::Identifier("force".into())));
     }
 
-    #[test]
-    fn test_next_token_single_char() {
-        let mut lexer = Lexer::new("= ; + - * / ^ : ( ) { }");
-        let expected = vec![
-            Token::Equal, Token::Semicolon, Token::Plus, Token::Minus, Token::Star,
-            Token::Slash, Token::Caret, Token::Colon, Token::LParen, Token::RParen,
-            Token::LBrace, Token::RBrace,
-        ];
-
-        for tok in expected {
-            assert_eq!(lexer.next_token(), Some(tok));
+    fn check_tokens(input: &str, expected: Vec<TokenKind>) {
+        let mut lexer = Lexer::new(input);
+        for kind in expected {
+            let recieved = lexer.next_token().expect("Expected a token");
+            assert_eq!(recieved.kind, kind);
         }
     }
 
     #[test]
-    fn test_next_token_number() {
-        let mut lexer = Lexer::new("42 3.14 1.5e-3");
-        assert_eq!(lexer.next_token(), Some(Token::Number(42.0)));
-        assert_eq!(lexer.next_token(), Some(Token::Number(3.14)));
-        assert_eq!(lexer.next_token(), Some(Token::Number(1.5e-3)));
+    fn next_token_single_char() {
+        let expected = vec![
+            TokenKind::Equal, TokenKind::Semicolon, TokenKind::Plus, TokenKind::Minus,
+            TokenKind::Star, TokenKind::Slash, TokenKind::Caret, TokenKind::Colon,
+            TokenKind::LParen, TokenKind::RParen, TokenKind::LBrace, TokenKind::RBrace,
+        ];
+        check_tokens("= ; + - * / ^ : ( ) { }", expected);
     }
 
     #[test]
-    fn test_next_token_identifier() {
-        let mut lexer = Lexer::new("let force print");
-        assert_eq!(lexer.next_token(), Some(Token::Let));
-        assert_eq!(lexer.next_token(), Some(Token::Identifier("force".into())));
-        assert_eq!(lexer.next_token(), Some(Token::Print));
+    fn next_token_numbers() {
+        check_tokens(
+            "42 3.14 1.5e-3",
+            vec![
+                TokenKind::Number(42.0),
+                TokenKind::Number(3.14),
+                TokenKind::Number(1.5e-3),
+            ],
+        );
+    }
+
+    #[test]
+    fn next_token_identifiers() {
+        check_tokens(
+            "let force print",
+            vec![
+                TokenKind::Let,
+                TokenKind::Identifier("force".into()),
+                TokenKind::Print,
+            ],
+        );
     }
 }

@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, PartialEq)]
-pub enum Token {
+pub enum TokenKind {
     Let,
     Const,
     Fn,
@@ -24,4 +24,21 @@ pub enum Token {
     RParen,
     LBrace,
     RBrace,
+}
+
+#[derive(Debug)]
+pub struct Token {
+    pub kind: TokenKind,
+    pub line: usize,
+    pub column: usize,
+}
+
+impl Token {
+    pub fn new(kind: TokenKind, line: usize, column: usize) -> Self {
+        Self {
+            kind,
+            line,
+            column,
+        }
+    }
 }

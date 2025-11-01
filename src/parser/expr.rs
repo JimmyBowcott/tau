@@ -1,6 +1,6 @@
 use crate::{
     ast::{BinaryOp, Expr},
-    token::Token,
+    token::{Token, TokenKind},
 };
 
 use super::Parser;
@@ -15,11 +15,11 @@ impl Parser {
 
         loop {
             let op = match self.peek() {
-                Some(Token::Plus) => (1, 2, BinaryOp::Add),
-                Some(Token::Minus) => (1, 2, BinaryOp::Subtract),
-                Some(Token::Star) => (3, 4, BinaryOp::Multiply),
-                Some(Token::Slash) => (3, 4, BinaryOp::Divide),
-                Some(Token::Caret) => (5, 4, BinaryOp::Power),
+                Some(Token { kind: TokenKind::Plus, .. }) => (1, 2, BinaryOp::Add),
+                Some(Token { kind: TokenKind::Minus, .. }) => (1, 2, BinaryOp::Subtract),
+                Some(Token { kind: TokenKind::Star, .. }) => (3, 4, BinaryOp::Multiply),
+                Some(Token { kind: TokenKind::Slash, .. }) => (3, 4, BinaryOp::Divide),
+                Some(Token { kind: TokenKind::Caret, .. }) => (5, 4, BinaryOp::Power),
                 _ => break,
             };
 
@@ -42,11 +42,11 @@ impl Parser {
 
     fn parse_primary(&mut self) -> Expr {
         let res = match self.advance() {
-            Some(Token::Identifier(id)) => Expr::Identifier(id.clone()),
-            Some(Token::Number(n)) => Expr::Number(n.clone()),
-            Some(Token::LParen) => {
+            Some(Token { kind: TokenKind::Identifier(id), .. }) => Expr::Identifier(id.clone()),
+            Some(Token { kind: TokenKind::Number(n), .. }) => Expr::Number(n.clone()),
+            Some(Token { kind: TokenKind::LParen, .. }) => {
                 let expr = self.parse_expr();
-                if let Some(Token::RParen) = self.advance() {
+                if let Some(Token { kind: TokenKind::RParen, .. }) = self.advance() {
                     expr
                 } else {
                     panic!("Expected )");
@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn parse_number() {
-        let tokens = vec![Token::Number(42.0)];
+        let tokens = vec![Token::new(TokenKind::Number(42.0), 1, 1)];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr();
         assert_eq!(expr, Expr::Number(42.0));
@@ -78,7 +78,7 @@ mod tests {
 
     #[test]
     fn parse_identifier() {
-        let tokens = vec![Token::Identifier("x".into())];
+        let tokens = vec![Token::new(TokenKind::Identifier("x".into()), 1, 1)];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr();
         assert_eq!(expr, Expr::Identifier("x".into()));
@@ -86,7 +86,11 @@ mod tests {
 
     #[test]
     fn parse_simple_addition() {
-        let tokens = vec![Token::Number(2.0), Token::Plus, Token::Number(3.0)];
+        let tokens = vec![
+            Token::new(TokenKind::Number(2.0), 1, 1),
+            Token::new(TokenKind::Plus, 1, 2),
+            Token::new(TokenKind::Number(3.0), 1, 3),
+        ];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr();
 
@@ -104,11 +108,11 @@ mod tests {
     fn parse_precedence() {
         // 2 + 3 * 4 => 2 + (3*4)
         let tokens = vec![
-            Token::Number(2.0),
-            Token::Plus,
-            Token::Number(3.0),
-            Token::Star,
-            Token::Number(4.0),
+            Token::new(TokenKind::Number(2.0), 1, 1),
+            Token::new(TokenKind::Plus, 1, 2),
+            Token::new(TokenKind::Number(3.0), 1, 3),
+            Token::new(TokenKind::Star, 1, 4),
+            Token::new(TokenKind::Number(4.0), 1, 5),
         ];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr();
@@ -131,13 +135,13 @@ mod tests {
     fn parse_parentheses() {
         // (2 + 3) * 4
         let tokens = vec![
-            Token::LParen,
-            Token::Number(2.0),
-            Token::Plus,
-            Token::Number(3.0),
-            Token::RParen,
-            Token::Star,
-            Token::Number(4.0),
+            Token::new(TokenKind::LParen, 1, 1),
+            Token::new(TokenKind::Number(2.0), 1, 2),
+            Token::new(TokenKind::Plus, 1, 3),
+            Token::new(TokenKind::Number(3.0), 1, 4),
+            Token::new(TokenKind::RParen, 1, 5),
+            Token::new(TokenKind::Star, 1, 6),
+            Token::new(TokenKind::Number(4.0), 1, 7),
         ];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr();
@@ -160,11 +164,11 @@ mod tests {
     fn parse_power_associativity() {
         // 2 ^ 3 ^ 2 = 2 ^ (3 ^ 2)
         let tokens = vec![
-            Token::Number(2.0),
-            Token::Caret,
-            Token::Number(3.0),
-            Token::Caret,
-            Token::Number(2.0),
+            Token::new(TokenKind::Number(2.0), 1, 1),
+            Token::new(TokenKind::Caret, 1, 2),
+            Token::new(TokenKind::Number(3.0), 1, 3),
+            Token::new(TokenKind::Caret, 1, 4),
+            Token::new(TokenKind::Number(2.0), 1, 5),
         ];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr();

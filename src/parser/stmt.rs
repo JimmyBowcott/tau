@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expr, Stmt, UnitExpr},
-    token::Token,
+    token::{Token, TokenKind},
 };
 
 use super::Parser;
@@ -8,31 +8,39 @@ use super::Parser;
 impl Parser {
     pub fn parse_stmt(&mut self) -> Option<Stmt> {
         match self.peek()? {
-            Token::Let => self.parse_let_stmt(),
-            Token::Print => self.parse_print_stmt(),
+            Token { kind: TokenKind::Let, .. } => self.parse_let_stmt(),
+            Token { kind: TokenKind::Print, .. } => self.parse_print_stmt(),
             _ => None,
         }
     }
 
-    pub fn expect_token(&mut self, expected: Token, err_msg: &str) {
-        if self.advance() != Some(&expected) {
-            panic!("{}", err_msg);
+    pub fn expect_token(&mut self, expected: TokenKind, err_msg: &str) {
+        if let Some(token) = self.advance() {
+            if token.kind != expected {
+                panic!("{}", err_msg);
+            }
         }
     }
 
     fn expect_identifier(&mut self, err_msg: &str) -> String {
-        if let Some(Token::Identifier(id)) = self.advance() {
-            id.clone()
-        } else {
-            panic!("{}", err_msg);
+        match self.advance() {
+            Some(Token {
+                kind: TokenKind::Identifier(id),
+                ..
+            }) => id.clone(),
+            _ => panic!("{}", err_msg),
         }
     }
 
     fn expect_unit(&mut self, err_msg: &str) -> UnitExpr {
         self.advance();
 
-        if let Some(Token::Identifier(_)) = self.peek() {
-           self.parse_unit_expr()
+        if let Some(Token {
+            kind: TokenKind::Identifier(_),
+            ..
+        }) = self.peek()
+        {
+            self.parse_unit_expr()
         } else {
             panic!("{}", err_msg);
         }
@@ -45,11 +53,15 @@ impl Parser {
 
         let mut unit = None;
 
-        if let Some(Token::Colon) = self.peek() {
+        if let Some(Token {
+            kind: TokenKind::Colon,
+            ..
+        }) = self.peek()
+        {
             unit = Some(self.expect_unit("Expected unit after ':'"));
         }
 
-        self.expect_token(Token::Equal, "Expected '='");
+        self.expect_token(TokenKind::Equal, "Expected '='");
         let value = self.parse_expr();
 
         Some(Stmt::Let { name, unit, value })
@@ -59,7 +71,11 @@ impl Parser {
         self.advance();
         let expr: Expr;
 
-        if let Some(Token::Identifier(name)) = self.peek() {
+        if let Some(Token {
+            kind: TokenKind::Identifier(name),
+            ..
+        }) = self.peek()
+        {
             expr = Expr::Identifier(name.clone());
             self.advance();
         } else {
@@ -72,10 +88,9 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::token::Token;
-    use crate::ast::{Expr, Stmt};
+    use crate::ast::{Expr, Stmt, UnitExpr, UnitOp, BinaryOp};
     use crate::parser::Parser;
-    use crate::ast::{UnitExpr, UnitOp};
+    use crate::token::{Token, TokenKind};
 
     fn make_parser(tokens: Vec<Token>) -> Parser {
         Parser::new(tokens)
@@ -84,10 +99,10 @@ mod tests {
     #[test]
     fn parse_simple_let() {
         let tokens = vec![
-            Token::Let,
-            Token::Identifier("x".into()),
-            Token::Equal,
-            Token::Number(42.0),
+            Token::new(TokenKind::Let, 1, 1),
+            Token::new(TokenKind::Identifier("x".into()), 1, 5),
+            Token::new(TokenKind::Equal, 1, 7),
+            Token::new(TokenKind::Number(42.0), 1, 9),
         ];
 
         let mut parser = make_parser(tokens);
@@ -106,14 +121,14 @@ mod tests {
     #[test]
     fn parse_let_with_unit() {
         let tokens = vec![
-            Token::Let,
-            Token::Identifier("v".into()),
-            Token::Colon,
-            Token::Identifier("m".into()),
-            Token::Slash,
-            Token::Identifier("s".into()),
-            Token::Equal,
-            Token::Number(10.0),
+            Token::new(TokenKind::Let, 1, 1),
+            Token::new(TokenKind::Identifier("v".into()), 1, 5),
+            Token::new(TokenKind::Colon, 1, 6),
+            Token::new(TokenKind::Identifier("m".into()), 1, 7),
+            Token::new(TokenKind::Slash, 1, 8),
+            Token::new(TokenKind::Identifier("s".into()), 1, 9),
+            Token::new(TokenKind::Equal, 1, 11),
+            Token::new(TokenKind::Number(10.0), 1, 13),
         ];
 
         let mut parser = make_parser(tokens);
@@ -138,26 +153,23 @@ mod tests {
     #[test]
     fn parse_print_identifier() {
         let tokens = vec![
-            Token::Print,
-            Token::Identifier("x".into()),
+            Token::new(TokenKind::Print, 1, 1),
+            Token::new(TokenKind::Identifier("x".into()), 1, 7),
         ];
 
         let mut parser = make_parser(tokens);
         let stmt = parser.parse_stmt().unwrap();
 
-        assert_eq!(
-            stmt,
-            Stmt::Print(Expr::Identifier("x".into()))
-        );
+        assert_eq!(stmt, Stmt::Print(Expr::Identifier("x".into())));
     }
 
     #[test]
     fn parse_print_expr() {
         let tokens = vec![
-            Token::Print,
-            Token::Number(3.14),
-            Token::Plus,
-            Token::Number(2.0),
+            Token::new(TokenKind::Print, 1, 1),
+            Token::new(TokenKind::Number(3.14), 1, 7),
+            Token::new(TokenKind::Plus, 1, 11),
+            Token::new(TokenKind::Number(2.0), 1, 13),
         ];
 
         let mut parser = make_parser(tokens);
@@ -165,28 +177,32 @@ mod tests {
 
         let expected_expr = Expr::Binary {
             left: Box::new(Expr::Number(3.14)),
-            op: crate::ast::BinaryOp::Add,
+            op: BinaryOp::Add,
             right: Box::new(Expr::Number(2.0)),
         };
 
-        assert_eq!(
-            stmt,
-            Stmt::Print(expected_expr)
-        );
+        assert_eq!(stmt, Stmt::Print(expected_expr));
     }
 
     #[test]
     #[should_panic(expected = "Expected identifier after 'let'")]
     fn parse_let_missing_identifier_should_panic() {
-        let tokens = vec![Token::Let, Token::Equal, Token::Number(5.0)];
+        let tokens = vec![
+            Token::new(TokenKind::Let, 1, 1),
+            Token::new(TokenKind::Equal, 1, 5),
+            Token::new(TokenKind::Number(5.0), 1, 7),
+        ];
         let mut parser = make_parser(tokens);
         parser.parse_stmt();
     }
 
     #[test]
-    #[should_panic(expected = "Expected '='")]
+    #[should_panic(expected = "Expected expression after '='")]
     fn parse_let_missing_equal_should_panic() {
-        let tokens = vec![Token::Let, Token::Identifier("x".into())];
+        let tokens = vec![
+            Token::new(TokenKind::Let, 1, 1),
+            Token::new(TokenKind::Identifier("x".into()), 1, 5),
+        ];
         let mut parser = make_parser(tokens);
         parser.parse_stmt();
     }
@@ -194,7 +210,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "Expected unit after ':'")]
     fn parse_let_missing_unit_should_panic() {
-        let tokens = vec![Token::Let, Token::Identifier("v".into()), Token::Colon, Token::Equal, Token::Number(10.0)];
+        let tokens = vec![
+            Token::new(TokenKind::Let, 1, 1),
+            Token::new(TokenKind::Identifier("v".into()), 1, 5),
+            Token::new(TokenKind::Colon, 1, 6),
+            Token::new(TokenKind::Equal, 1, 8),
+            Token::new(TokenKind::Number(10.0), 1, 10),
+        ];
         let mut parser = make_parser(tokens);
         parser.parse_stmt();
     }
