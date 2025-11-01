@@ -1,4 +1,4 @@
-use tau::{analysis::Analyser, lexer::Lexer, parser::Parser, runtime::Env };
+use tau::{analysis::Analyser, lexer::Lexer, parser::Parser, runtime::Env};
 
 fn run(source: &str) -> Result<(), String> {
     let lexer = Lexer::new(source);
@@ -18,6 +18,8 @@ fn run(source: &str) -> Result<(), String> {
 }
 
 fn main() -> Result<(), String> {
-    run("let t = 5; let velocity: m/s = 0.5; let g: m/s^2 = 9.81; print(velocity + g);")?;
+    let source = std::fs::read_to_string("test_file.tau")
+        .map_err(|e| format!("Failed to read source file: {}", e))?;
+    run(&source)?;
     Ok(())
 }
