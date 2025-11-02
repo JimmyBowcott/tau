@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::{
     ast::{Expr, Stmt, UnitExpr},
     token::{Token, TokenKind},
@@ -8,8 +10,14 @@ use super::Parser;
 impl Parser {
     pub fn parse_stmt(&mut self) -> Option<Stmt> {
         match self.peek()? {
-            Token { kind: TokenKind::Let, .. } => self.parse_let_stmt(),
-            Token { kind: TokenKind::Print, .. } => self.parse_print_stmt(),
+            Token {
+                kind: TokenKind::Let,
+                ..
+            } => self.parse_let_stmt(),
+            Token {
+                kind: TokenKind::Print,
+                ..
+            } => self.parse_print_stmt(),
             _ => None,
         }
     }
@@ -17,7 +25,7 @@ impl Parser {
     pub fn expect_token(&mut self, expected: TokenKind, err_msg: &str) {
         if let Some(token) = self.advance() {
             if token.kind != expected {
-                panic!("{}", err_msg);
+                panic!("Line {}:{}: {}", token.line, token.column, err_msg);
             }
         }
     }
@@ -28,6 +36,7 @@ impl Parser {
                 kind: TokenKind::Identifier(id),
                 ..
             }) => id.clone(),
+            Some(Token { line, column, .. }) => panic!("Line {}:{}, {}", line, column, err_msg),
             _ => panic!("{}", err_msg),
         }
     }
@@ -35,14 +44,13 @@ impl Parser {
     fn expect_unit(&mut self, err_msg: &str) -> UnitExpr {
         self.advance();
 
-        if let Some(Token {
-            kind: TokenKind::Identifier(_),
-            ..
-        }) = self.peek()
-        {
-            self.parse_unit_expr()
-        } else {
-            panic!("{}", err_msg);
+        match self.peek() {
+            Some(Token {
+                kind: TokenKind::Identifier(_),
+                ..
+            }) => self.parse_unit_expr(),
+            Some(Token { line, column, .. }) => panic!("Line {}:{}, {}", line, column, err_msg),
+            _ => panic!("{}", err_msg),
         }
     }
 
@@ -88,7 +96,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{Expr, Stmt, UnitExpr, UnitOp, BinaryOp};
+    use crate::ast::{BinaryOp, Expr, Stmt, UnitExpr, UnitOp};
     use crate::parser::Parser;
     use crate::token::{Token, TokenKind};
 
