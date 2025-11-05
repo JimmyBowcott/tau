@@ -1,4 +1,7 @@
-use crate::{ast::{UnitExpr, UnitOp}, token::{Token, TokenKind}};
+use crate::{
+    ast::{UnitExpr, UnitOp},
+    token::{Token, TokenKind},
+};
 
 use super::Parser;
 
@@ -12,11 +15,11 @@ impl Parser {
                 TokenKind::Dot => {
                     self.advance();
                     op = UnitOp::Multiply;
-                },
+                }
                 TokenKind::Slash => {
                     self.advance();
                     op = UnitOp::Divide;
-                },
+                }
                 _ => break,
             }
             let right = self.parse_unit();
@@ -41,24 +44,38 @@ impl Parser {
     }
 
     fn parse_unit_base(&mut self) -> UnitExpr {
-        let base = if let Some(Token{ kind: TokenKind::Identifier(id), .. }) = self.advance() {
-            UnitExpr::Symbol(id.clone())
-        } else {
-            panic!("Expected unit identifier");
-        };
-        base
+        match self.advance() {
+            Some(Token {
+                kind: TokenKind::Identifier(id),
+                ..
+            }) => UnitExpr::Symbol(id.clone()),
+            Some(Token { line, column, .. }) => {
+                panic!("Line {}:{}: Expected unit identifier", line, column)
+            }
+            _ => panic!("Expected unit identifier"),
+        }
     }
 
     fn parse_unit_exponent(&mut self) -> Option<f64> {
-        if let Some(Token { kind: TokenKind::Caret, .. }) = self.peek() {
+        if let Some(Token {
+            kind: TokenKind::Caret,
+            ..
+        }) = self.peek()
+        {
             self.advance();
-            if let Some(Token { kind: TokenKind::Number(n), .. }) = self.advance() {
-                return Some(n.clone());
-            } else {
-                panic!("Expected number after ^");
+
+            match self.advance() {
+                Some(Token {
+                    kind: TokenKind::Number(n),
+                    ..
+                }) => Some(n.clone()),
+                Some(Token { line, column, .. }) => {
+                    panic!("Line {}:{}: Expected number after ^", line, column)
+                }
+                _ => panic!("Expected number after ^"),
             }
         } else {
-            return None;
+            None
         }
     }
 }
@@ -66,8 +83,8 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::token::{Token, TokenKind};
     use crate::ast::{UnitExpr, UnitOp};
+    use crate::token::{Token, TokenKind};
 
     fn make_parser(tokens: Vec<Token>) -> Parser {
         Parser::new(tokens)
