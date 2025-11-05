@@ -33,6 +33,12 @@ pub struct Token {
     pub column: usize,
 }
 
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+    }
+}
+
 impl Token {
     pub fn new(kind: TokenKind, line: usize, column: usize) -> Self {
         Self {

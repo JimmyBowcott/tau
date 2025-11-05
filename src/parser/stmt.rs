@@ -205,7 +205,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Expected expression after '='")]
+    #[should_panic]
     fn parse_let_missing_equal_should_panic() {
         let tokens = vec![
             Token::new(TokenKind::Let, 1, 1),

@@ -1,20 +1,19 @@
-use tau::{lexer::Lexer, token::Token};
+use tau::{lexer::Lexer, token::{Token, TokenKind}};
 
 #[test]
 fn test_simple_tokens() {
     let input = "let x = 42;";
     let tokens: Vec<_> = Lexer::new(input).collect();
 
-    assert_eq!(
-        tokens,
-        vec![
-            Token::new(Let),
-            Token::new(Identifier(r)),
-            Token::new(Equal),
-            Token::new(Number(r)),
-            Token::new(Semicolon),
-        ]
-    );
+    let expected = vec![
+        Token::new(TokenKind::Let, 0, 0),
+        Token::new(TokenKind::Identifier("x".into()), 0, 0),
+        Token::new(TokenKind::Equal, 0, 0),
+        Token::new(TokenKind::Number(42.0), 0, 0),
+        Token::new(TokenKind::Semicolon, 0, 0),
+    ];
+
+    assert_eq!(tokens, expected);
 }
 
 #[test]
@@ -22,19 +21,18 @@ fn test_numbers_and_identifiers() {
     let input = "mass = 1.5E-3; velocity = 3.14;";
     let tokens: Vec<_> = Lexer::new(input).collect();
 
-    assert_eq!(
-        tokens,
-        vec![
-            Token::new(Identifier(r)),
-            Token::new(Equal),
-            Token::new(Number(r)),
-            Token::new(Semicolon),
-            Token::new(Identifier(r)),
-            Token::new(Equal),
-            Token::new(Number(r)),
-            Token::new(Semicolon),
-        ]
-    );
+    let expected = vec![
+        Token::new(TokenKind::Identifier("mass".into()), 0, 0),
+        Token::new(TokenKind::Equal, 0, 0),
+        Token::new(TokenKind::Number(1.5e-3), 0, 0),
+        Token::new(TokenKind::Semicolon, 0, 0),
+        Token::new(TokenKind::Identifier("velocity".into()), 0, 0),
+        Token::new(TokenKind::Equal, 0, 0),
+        Token::new(TokenKind::Number(3.14), 0, 0),
+        Token::new(TokenKind::Semicolon, 0, 0),
+    ];
+
+    assert_eq!(tokens, expected);
 }
 
 #[test]
@@ -43,9 +41,17 @@ fn test_symbols() {
     let tokens: Vec<_> = Lexer::new(input).collect();
 
     let expected = vec![
-        Token::new(Plus), Token::new(Minus), Token::new(Star), Token::new(Slash), Token::new(Caret),
-        Token::new(Colon), Token::new(Semicolon), Token::new(LParen), Token::new(RParen),
-        Token::new(LBrace), Token::new(RBrace),
+        Token::new(TokenKind::Plus, 0, 0),
+        Token::new(TokenKind::Minus, 0, 0),
+        Token::new(TokenKind::Star, 0, 0),
+        Token::new(TokenKind::Slash, 0, 0),
+        Token::new(TokenKind::Caret, 0, 0),
+        Token::new(TokenKind::Colon, 0, 0),
+        Token::new(TokenKind::Semicolon, 0, 0),
+        Token::new(TokenKind::LParen, 0, 0),
+        Token::new(TokenKind::RParen, 0, 0),
+        Token::new(TokenKind::LBrace, 0, 0),
+        Token::new(TokenKind::RBrace, 0, 0),
     ];
 
     assert_eq!(tokens, expected);
@@ -57,9 +63,9 @@ fn test_keywords() {
     let tokens: Vec<_> = Lexer::new(input).collect();
 
     let expected = vec![
-        Token::new(Let),
-        Token::new(Print),
-        Token::new(Identifier(r)),
+        Token::new(TokenKind::Let, 0, 0),
+        Token::new(TokenKind::Print, 0, 0),
+        Token::new(TokenKind::Identifier("force".into()), 0, 0),
     ];
 
     assert_eq!(tokens, expected);
@@ -71,21 +77,21 @@ fn test_complex_expression() {
     let tokens: Vec<_> = Lexer::new(input).collect();
 
     let expected = vec![
-        Token::new(Let),
-        Token::new(Identifier(r)),
-        Token::new(Colon),
-        Token::new(Identifier(r)),
-        Token::new(Slash),
-        Token::new(Identifier(r)),
-        Token::new(Equal),
-        Token::new(Number(r)),
-        Token::new(Slash),
-        Token::new(LParen),
-        Token::new(Number(r)),
-        Token::new(Star),
-        Token::new(Identifier(r)),
-        Token::new(RParen),
-        Token::new(Semicolon),
+        Token::new(TokenKind::Let, 0, 0),
+        Token::new(TokenKind::Identifier("velocity".into()), 0, 0),
+        Token::new(TokenKind::Colon, 0, 0),
+        Token::new(TokenKind::Identifier("m".into()), 0, 0),
+        Token::new(TokenKind::Slash, 0, 0),
+        Token::new(TokenKind::Identifier("s".into()), 0, 0),
+        Token::new(TokenKind::Equal, 0, 0),
+        Token::new(TokenKind::Number(10.0), 0, 0),
+        Token::new(TokenKind::Slash, 0, 0),
+        Token::new(TokenKind::LParen, 0, 0),
+        Token::new(TokenKind::Number(2.0), 0, 0),
+        Token::new(TokenKind::Star, 0, 0),
+        Token::new(TokenKind::Identifier("t".into()), 0, 0),
+        Token::new(TokenKind::RParen, 0, 0),
+        Token::new(TokenKind::Semicolon, 0, 0),
     ];
 
     assert_eq!(tokens, expected);
