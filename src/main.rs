@@ -5,7 +5,7 @@ fn run(source: &str) -> Result<(), String> {
     let tokens = lexer.collect();
 
     let mut parser = Parser::new(tokens);
-    let stmts = parser.parse();
+    let stmts = parser.parse()?;
 
     let mut analyser = Analyser::new();
     analyser.analyse(&stmts)?;

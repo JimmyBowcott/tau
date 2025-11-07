@@ -15,17 +15,17 @@ impl Parser {
         Self { tokens, pos: 0 }
     }
 
-    pub fn parse(&mut self) -> Vec<Stmt> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, String> {
         let mut stmts = Vec::new();
         while !self.is_at_end() {
-            if let Some(stmt) = self.parse_stmt() {
-                self.expect_token(TokenKind::Semicolon, "Expected ';' after statement");
+            if let Some(stmt) = self.parse_stmt()? {
+                self.expect_token(TokenKind::Semicolon, "Expected ';' after statement")?;
                 stmts.push(stmt);
             } else {
                 break;
             }
         }
-        stmts
+        Ok(stmts)
     }
 
     fn peek(&self) -> Option<&Token> {
