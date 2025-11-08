@@ -52,25 +52,25 @@ pub enum Stmt {
 }
 
 impl Expr {
-    fn eval(&self, env: &mut Env) -> f64 {
+    fn eval(&self, env: &mut Env) -> Result<f64, String> {
         match self {
-            Expr::Number(n) => *n,
+            Expr::Number(n) => Ok(*n),
             Expr::Binary { left, op, right } => {
-                let l = left.eval(env);
-                let r = right.eval(env);
+                let l = left.eval(env)?;
+                let r = right.eval(env)?;
                 match op {
-                    BinaryOp::Add => l + r,
-                    BinaryOp::Subtract => l - r,
-                    BinaryOp::Multiply => l * r,
-                    BinaryOp::Divide => l / r,
-                    BinaryOp::Power => l.powf(r),
+                    BinaryOp::Add => Ok(l + r),
+                    BinaryOp::Subtract => Ok(l - r),
+                    BinaryOp::Multiply => Ok(l * r),
+                    BinaryOp::Divide => Ok(l / r),
+                    BinaryOp::Power => Ok(l.powf(r)),
                 }
             }
             Expr::Identifier(name) => {
                 if let Some(value) = env.get(name) {
-                    *value
+                    Ok(*value)
                 } else {
-                    panic!("Unknown variable {}", name);
+                    Err(format!("Unknown variable {}", name))
                 }
             }
         }
@@ -102,20 +102,21 @@ impl UnitExpr {
 }
 
 impl Stmt {
-    pub fn exec(&self, env: &mut Env) {
+    pub fn exec(&self, env: &mut Env) -> Result<(), String> {
         match self {
             Stmt::Expr(expr) => {
-                expr.eval(env);
+                expr.eval(env)?;
             }
             Stmt::Let { name, value, .. } => {
-                let val = value.eval(env);
+                let val = value.eval(env)?;
                 env.insert(name.clone(), val);
             }
             Stmt::Print(expr) => {
-                let val = expr.eval(env);
+                let val = expr.eval(env)?;
                 println!("{}", val);
             }
-        }
+        };
+        Ok(())
     }
 
     pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), String> {
@@ -153,7 +154,7 @@ mod tests {
     fn eval_number() {
         let mut env = env();
         let expr = Expr::Number(42.0);
-        assert_eq!(expr.eval(&mut env), 42.0);
+        assert_eq!(expr.eval(&mut env).unwrap(), 42.0);
     }
 
     #[test]
@@ -164,7 +165,7 @@ mod tests {
             op: BinaryOp::Add,
             right: Box::new(Expr::Number(3.0)),
         };
-        assert_eq!(expr.eval(&mut env), 5.0);
+        assert_eq!(expr.eval(&mut env).unwrap(), 5.0);
     }
 
     #[test]
@@ -175,7 +176,7 @@ mod tests {
             op: BinaryOp::Power,
             right: Box::new(Expr::Number(3.0)),
         };
-        assert_eq!(expr.eval(&mut env), 8.0);
+        assert_eq!(expr.eval(&mut env).unwrap(), 8.0);
     }
 
     #[test]
@@ -183,7 +184,7 @@ mod tests {
         let mut env = env();
         env.insert("x".to_string(), 7.0);
         let expr = Expr::Identifier("x".into());
-        assert_eq!(expr.eval(&mut env), 7.0);
+        assert_eq!(expr.eval(&mut env).unwrap(), 7.0);
     }
 
     #[test]
@@ -194,7 +195,7 @@ mod tests {
             value: Expr::Number(10.0),
             unit: None,
         };
-        stmt.exec(&mut env);
+        stmt.exec(&mut env).unwrap();
         assert_eq!(*env.get("x").unwrap(), 10.0);
     }
 }
