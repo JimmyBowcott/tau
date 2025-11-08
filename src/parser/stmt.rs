@@ -20,7 +20,7 @@ impl Parser {
             Token {
                 kind: TokenKind::Print,
                 ..
-            } => Ok(Some(self.parse_print_stmt())),
+            } => self.parse_print_stmt().map(Some),
             _ => Err(format!("Line {}:{}: unexpected token '{:?}'", token.line, token.column, token.kind)),
         }
     }
@@ -51,7 +51,7 @@ impl Parser {
             Some(Token {
                 kind: TokenKind::Identifier(_),
                 ..
-            }) => Ok(self.parse_unit_expr()),
+            }) => Ok(self.parse_unit_expr()?),
             Some(Token { line, column, .. }) => Err(format!("Line {}:{}, {}", line, column, err_msg)),
             _ => Err(format!("{}", err_msg)),
         }
@@ -72,12 +72,12 @@ impl Parser {
         }
 
         self.expect_token(TokenKind::Equal, "Expected '='")?;
-        let value = self.parse_expr();
+        let value = self.parse_expr()?;
 
         Ok(Stmt::Let { name, unit, value })
     }
 
-    fn parse_print_stmt(&mut self) -> Stmt {
+    fn parse_print_stmt(&mut self) -> Result<Stmt, String> {
         self.advance();
         let expr: Expr;
 
@@ -89,10 +89,10 @@ impl Parser {
             expr = Expr::Identifier(name.clone());
             self.advance();
         } else {
-            expr = self.parse_expr();
+            expr = self.parse_expr()?;
         }
 
-        Stmt::Print(expr)
+        Ok(Stmt::Print(expr))
     }
 }
 

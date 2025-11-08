@@ -6,12 +6,12 @@ use crate::{
 use super::Parser;
 
 impl Parser {
-    pub fn parse_expr(&mut self) -> Expr {
+    pub fn parse_expr(&mut self) -> Result<Expr, String> {
         self.parse_expr_bp(0)
     }
 
-    fn parse_expr_bp(&mut self, min_bp: u8) -> Expr {
-        let mut lhs = self.parse_primary();
+    fn parse_expr_bp(&mut self, min_bp: u8) -> Result<Expr, String> {
+        let mut lhs = self.parse_primary()?;
 
         loop {
             let op = match self.peek() {
@@ -29,7 +29,7 @@ impl Parser {
             }
 
             self.advance();
-            let rhs = self.parse_expr_bp(rbp);
+            let rhs = self.parse_expr_bp(rbp)?;
             lhs = Expr::Binary {
                 left: Box::new(lhs),
                 op: bop,
@@ -37,24 +37,23 @@ impl Parser {
             };
         }
 
-        lhs
+        Ok(lhs)
     }
 
-    fn parse_primary(&mut self) -> Expr {
-        let res = match self.advance() {
-            Some(Token { kind: TokenKind::Identifier(id), .. }) => Expr::Identifier(id.clone()),
-            Some(Token { kind: TokenKind::Number(n), .. }) => Expr::Number(n.clone()),
+    fn parse_primary(&mut self) -> Result<Expr, String> {
+        match self.advance() {
+            Some(Token { kind: TokenKind::Identifier(id), .. }) => Ok(Expr::Identifier(id.clone())),
+            Some(Token { kind: TokenKind::Number(n), .. }) => Ok(Expr::Number(n.clone())),
             Some(Token { kind: TokenKind::LParen, .. }) => {
-                let expr = self.parse_expr();
+                let expr = self.parse_expr()?;
                 if let Some(Token { kind: TokenKind::RParen, .. }) = self.advance() {
-                    expr
+                    Ok(expr)
                 } else {
-                    panic!("Expected )");
+                    Err("Expected )".into())
                 }
             }
-            _ => panic!("Expected number or variable"),
-        };
-        res
+            _ => Err("Expected number or variable".into()),
+        }
     }
 }
 
@@ -72,7 +71,7 @@ mod tests {
     fn parse_number() {
         let tokens = vec![Token::new(TokenKind::Number(42.0), 1, 1)];
         let mut parser = make_parser(tokens);
-        let expr = parser.parse_expr();
+        let expr = parser.parse_expr().unwrap();
         assert_eq!(expr, Expr::Number(42.0));
     }
 
@@ -80,7 +79,7 @@ mod tests {
     fn parse_identifier() {
         let tokens = vec![Token::new(TokenKind::Identifier("x".into()), 1, 1)];
         let mut parser = make_parser(tokens);
-        let expr = parser.parse_expr();
+        let expr = parser.parse_expr().unwrap();
         assert_eq!(expr, Expr::Identifier("x".into()));
     }
 
@@ -92,7 +91,7 @@ mod tests {
             Token::new(TokenKind::Number(3.0), 1, 3),
         ];
         let mut parser = make_parser(tokens);
-        let expr = parser.parse_expr();
+        let expr = parser.parse_expr().unwrap();
 
         assert_eq!(
             expr,
@@ -115,7 +114,7 @@ mod tests {
             Token::new(TokenKind::Number(4.0), 1, 5),
         ];
         let mut parser = make_parser(tokens);
-        let expr = parser.parse_expr();
+        let expr = parser.parse_expr().unwrap();
 
         assert_eq!(
             expr,
@@ -144,7 +143,7 @@ mod tests {
             Token::new(TokenKind::Number(4.0), 1, 7),
         ];
         let mut parser = make_parser(tokens);
-        let expr = parser.parse_expr();
+        let expr = parser.parse_expr().unwrap();
 
         assert_eq!(
             expr,
@@ -171,7 +170,7 @@ mod tests {
             Token::new(TokenKind::Number(2.0), 1, 5),
         ];
         let mut parser = make_parser(tokens);
-        let expr = parser.parse_expr();
+        let expr = parser.parse_expr().unwrap();
 
         assert_eq!(
             expr,
@@ -188,10 +187,9 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Expected number or variable")]
-    fn parse_empty_should_panic() {
+    fn parse_empty_should_err() {
         let tokens = vec![];
         let mut parser = make_parser(tokens);
-        parser.parse_expr();
+        assert!(parser.parse_expr().is_err());
     }
 }
