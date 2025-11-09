@@ -20,6 +20,10 @@ impl SymbolTable {
         }
     }
 
+    pub fn get_dimension(&self, name: &str) -> Option<Dimension> {
+        self.vars.get(name).map(|v| v.unit.clone())
+    }
+
     pub fn declare(&mut self, name: &str, unit: Dimension) -> Result<(), String> {
         if self.vars.contains_key(name) {
             return Err(format!("Variable '{}' already declared", name));

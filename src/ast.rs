@@ -1,4 +1,7 @@
-use crate::{analysis::{units::Dimension, Analyser}, runtime::Env};
+use crate::{
+    analysis::{Analyser, units::Dimension},
+    runtime::Env,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOp {
@@ -77,12 +80,70 @@ impl Expr {
     }
 
     pub fn validate(&self, ctx: &mut Analyser) -> Result<(), String> {
+        self.check_declared(ctx)?;
+        self.check_dimension(ctx)?;
+        Ok(())
+    }
+
+    fn check_declared(&self, ctx: &mut Analyser) -> Result<(), String> {
         match self {
             Expr::Number(_) => Ok(()),
             Expr::Identifier(name) => ctx.symbols.check_declared(name),
             Expr::Binary { left, right, .. } => {
                 left.validate(ctx)?;
                 right.validate(ctx)
+            }
+        }
+    }
+
+    fn check_dimension(&self, ctx: &mut Analyser) -> Result<Dimension, String> {
+        match self {
+            Expr::Number(_) => Ok(Dimension::new([0; 7])),
+
+            Expr::Identifier(name) => ctx
+                .symbols
+                .get_dimension(name)
+                .ok_or_else(|| format!("Undeclared variable '{}'", name)),
+
+            Expr::Binary { left, op, right } => {
+                let ldim = left.check_dimension(ctx)?;
+                let rdim = right.check_dimension(ctx)?;
+
+                match op {
+                    BinaryOp::Add | BinaryOp::Subtract => {
+                        if ldim == rdim {
+                            Ok(ldim)
+                        } else {
+                            // TODO: Implement "as_text" to make Dimension readable
+                            Err(format!(
+                                "Unit mismatch: cannot {:?} ({}) and ({})",
+                                op,
+                                "",
+                                ""
+                                //ldim.as_text(),
+                                //rdim.as_text()
+                            ))
+                        }
+                    }
+
+                    BinaryOp::Multiply => Ok(ldim.add(&rdim)),
+                    BinaryOp::Divide => Ok(ldim.sub(&rdim)),
+                    BinaryOp::Power => {
+                        match **right {
+                            Expr::Number(exp_val) => {
+                                if (exp_val.fract()).abs() > std::f64::EPSILON {
+                                    return Err(format!(
+                                        "Non-integer exponent {} not allowed for units",
+                                        exp_val
+                                    ));
+                                }
+                                let n = exp_val as i32;
+                                Ok(ldim.scale(n as f64))
+                            }
+                            _ => Err("Exponent must be a dimensionless numeric literal".into()),
+                        }
+                    }
+                }
             }
         }
     }
@@ -122,7 +183,9 @@ impl Stmt {
     pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), String> {
         match self {
             Stmt::Let { name, value, unit } => {
-                if let Some(u) = unit { u.validate(ctx)?; }
+                if let Some(u) = unit {
+                    u.validate(ctx)?;
+                }
 
                 let dimension = match unit {
                     Some(u) => ctx.get_dimension(u)?,
@@ -134,9 +197,7 @@ impl Stmt {
                 ctx.symbols.define(name);
                 Ok(())
             }
-            Stmt::Print(expr) | Stmt::Expr(expr) => {
-                expr.validate(ctx)
-            }
+            Stmt::Print(expr) | Stmt::Expr(expr) => expr.validate(ctx),
         }
     }
 }
