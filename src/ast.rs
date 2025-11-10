@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::{
     analysis::{Analyser, units::Dimension},
     runtime::Env,
@@ -52,6 +54,13 @@ pub enum Stmt {
         value: Expr,
     },
     Print(Expr),
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = format!("{:?}", self).to_lowercase();
+        write!(f, "{}", s)
+    }
 }
 
 impl Expr {
@@ -114,14 +123,11 @@ impl Expr {
                         if ldim == rdim {
                             Ok(ldim)
                         } else {
-                            // TODO: Implement "as_text" to make Dimension readable
                             Err(format!(
-                                "Unit mismatch: cannot {:?} ({}) and ({})",
+                                "Unit mismatch: cannot {:?} {} and {}",
                                 op,
-                                "",
-                                ""
-                                //ldim.as_text(),
-                                //rdim.as_text()
+                                ldim,
+                                rdim,
                             ))
                         }
                     }

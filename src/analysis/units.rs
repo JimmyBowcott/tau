@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::{fmt, collections::{HashMap, HashSet}};
 
 use crate::ast::{UnitExpr, UnitOp};
 
@@ -32,6 +32,7 @@ impl Analyser {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Dimension {
+    // Represented as [kg, m, s, A, K, mol, cd]
     pub exponents: [i8; 7],
 }
 
@@ -63,11 +64,41 @@ impl Dimension {
         }
         Self::new(result)
     }
+
+    pub fn is_dimensionless(&self) -> bool {
+        self.exponents.iter().all(|e| *e == 0)
+    }
+}
+
+impl fmt::Display for Dimension {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let names = ["kg", "m", "s", "A", "K", "mol", "cd"];
+
+        if self.is_dimensionless() {
+            return write!(f, "1")
+        }
+
+        let res: Vec<String> = self
+            .exponents
+            .iter()
+            .zip(names.iter())
+            .filter_map(|(&exp, &name)| {
+                if exp == 0 {
+                    None
+                } else if exp == 1 {
+                    Some(name.to_string())
+                } else {
+                    Some(format!("{}^{}", name, exp))
+                }
+            })
+        .collect();
+
+        write!(f, "{}", res.join("•"))
+    }
 }
 
 #[derive(Clone)]
 pub struct Unit {
-    /// Represented as [kg, m, s, A, K, mol, cd]
     pub dimension: Dimension,
     pub allows_prefix: bool,
     pub scale: f64,
