@@ -375,4 +375,11 @@ mod tests {
         let res = ctx.get_dimension(&expr);
         assert!(res.is_err());
     }
+
+    #[test]
+    fn test_dimension_display() {
+        let expected = "kg•m^2•s^3•A^4•K^5•mol^6•cd^7";
+        let actual = Dimension::new([1, 2, 3, 4, 5, 6, 7]).to_string();
+        assert_eq!(expected, actual);
+    }
 }
