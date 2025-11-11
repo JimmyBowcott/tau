@@ -124,8 +124,8 @@ impl Expr {
                             Ok(ldim)
                         } else {
                             Err(format!(
-                                "Unit mismatch: cannot {:?} {} and {}",
-                                op,
+                                "Unit mismatch: cannot {} {} and {}",
+                                op.to_string(),
                                 ldim,
                                 rdim,
                             ))
@@ -134,21 +134,19 @@ impl Expr {
 
                     BinaryOp::Multiply => Ok(ldim.add(&rdim)),
                     BinaryOp::Divide => Ok(ldim.sub(&rdim)),
-                    BinaryOp::Power => {
-                        match **right {
-                            Expr::Number(exp_val) => {
-                                if (exp_val.fract()).abs() > std::f64::EPSILON {
-                                    return Err(format!(
-                                        "Non-integer exponent {} not allowed for units",
-                                        exp_val
-                                    ));
-                                }
-                                let n = exp_val as i32;
-                                Ok(ldim.scale(n as f64))
+                    BinaryOp::Power => match **right {
+                        Expr::Number(exp_val) => {
+                            if (exp_val.fract()).abs() > std::f64::EPSILON {
+                                return Err(format!(
+                                    "Non-integer exponent {} not allowed for units",
+                                    exp_val
+                                ));
                             }
-                            _ => Err("Exponent must be a dimensionless numeric literal".into()),
+                            let n = exp_val as i32;
+                            Ok(ldim.scale(n as f64))
                         }
-                    }
+                        _ => Err("Exponent must be a dimensionless numeric literal".into()),
+                    },
                 }
             }
         }
@@ -264,5 +262,24 @@ mod tests {
         };
         stmt.exec(&mut env).unwrap();
         assert_eq!(*env.get("x").unwrap(), 10.0);
+    }
+
+    #[test]
+    fn units_display_correctly() {
+        let expected = [
+            "add",
+            "subtract",
+            "divide",
+            "multiply",
+            "power"
+        ];
+        let actual = [
+            BinaryOp::Add.to_string(),
+            BinaryOp::Subtract.to_string(),
+            BinaryOp::Divide.to_string(),
+            BinaryOp::Multiply.to_string(),
+            BinaryOp::Power.to_string(),
+        ];
+        assert_eq!(expected, actual);
     }
 }

@@ -12,7 +12,7 @@ fn run(source: &str) -> Result<(), String> {
 
     let mut env = Env::new();
     for stmt in stmts {
-        stmt.exec(&mut env);
+        stmt.exec(&mut env)?;
     }
     Ok(())
 }
