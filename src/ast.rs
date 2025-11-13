@@ -208,7 +208,8 @@ impl Stmt {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{BinaryOp, Expr, Stmt};
+    use crate::ast::{BinaryOp, Expr, Stmt, Dimension};
+    use crate::analysis::Analyser;
     use crate::runtime::Env;
 
     fn env() -> Env {
@@ -281,5 +282,102 @@ mod tests {
             BinaryOp::Power.to_string(),
         ];
         assert_eq!(expected, actual);
+    }
+
+    fn setup_analyser() -> Analyser {
+        let mut analyser = Analyser::new();
+        analyser.symbols.declare("mass", Dimension::new([1, 0, 0, 0, 0, 0, 0])).unwrap();      // kg
+        analyser.symbols.define("mass");
+        analyser.symbols.declare("accel", Dimension::new([0, 1, -2, 0, 0, 0, 0])).unwrap();    // m·s⁻²
+        analyser.symbols.define("accel");
+        analyser.symbols.declare("force", Dimension::new([1, 1, -2, 0, 0, 0, 0])).unwrap();    // kg·m·s⁻² (N)
+        analyser.symbols.define("force");
+        analyser.symbols.declare("pressure", Dimension::new([1, -1, -2, 0, 0, 0, 0])).unwrap(); // kg·m⁻¹·s⁻² (Pa)
+        analyser.symbols.define("pressure");
+        analyser.symbols.declare("area", Dimension::new([0, 2, 0, 0, 0, 0, 0])).unwrap();       // m²
+        analyser.symbols.define("area");
+        analyser
+    }
+
+    #[test]
+    fn number_is_dimensionless() {
+        let expr = Expr::Number(9.81);
+        let mut ctx = setup_analyser();
+        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([0; 7]));
+    }
+
+    #[test]
+    fn variable_dimension_matches_declaration() {
+        let expr = Expr::Identifier("mass".into());
+        let mut ctx = setup_analyser();
+        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([1, 0, 0, 0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn addition_same_dimension_ok() {
+        let expr = Expr::Binary {
+            left: Box::new(Expr::Identifier("force".into())),
+            op: BinaryOp::Add,
+            right: Box::new(Expr::Identifier("force".into())),
+        };
+        let mut ctx = setup_analyser();
+        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([1, 1, -2, 0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn addition_mismatched_units_fails() {
+        let expr = Expr::Binary {
+            left: Box::new(Expr::Identifier("pressure".into())),
+            op: BinaryOp::Add,
+            right: Box::new(Expr::Identifier("force".into())),
+        };
+        let mut ctx = setup_analyser();
+        let err = expr.check_dimension(&mut ctx).unwrap_err();
+        assert!(err.contains("Unit mismatch"));
+    }
+
+    #[test]
+    fn multiplication_combines_dimensions() {
+        let expr = Expr::Binary {
+            left: Box::new(Expr::Identifier("mass".into())),
+            op: BinaryOp::Multiply,
+            right: Box::new(Expr::Identifier("accel".into())),
+        };
+        let mut ctx = setup_analyser();
+        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([1, 1, -2, 0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn division_subtracts_dimensions() {
+        let expr = Expr::Binary {
+            left: Box::new(Expr::Identifier("force".into())),
+            op: BinaryOp::Divide,
+            right: Box::new(Expr::Identifier("area".into())),
+        };
+        let mut ctx = setup_analyser();
+        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([1, -1, -2, 0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn power_integer_exponent_valid() {
+        let expr = Expr::Binary {
+            left: Box::new(Expr::Identifier("area".into())),
+            op: BinaryOp::Power,
+            right: Box::new(Expr::Number(2.0)),
+        };
+        let mut ctx = setup_analyser();
+        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([0, 4, 0, 0, 0, 0, 0]));
+    }
+
+    #[test]
+    fn power_non_integer_exponent_fails() {
+        let expr = Expr::Binary {
+            left: Box::new(Expr::Identifier("area".into())),
+            op: BinaryOp::Power,
+            right: Box::new(Expr::Number(0.5)),
+        };
+        let mut ctx = setup_analyser();
+        let err = expr.check_dimension(&mut ctx).unwrap_err();
+        assert!(err.contains("Non-integer exponent"));
     }
 }
