@@ -4,8 +4,7 @@ use std::{
 };
 
 use crate::ast::{UnitExpr, UnitOp};
-
-use super::Analyser;
+use super::{dimension::Dimension, Analyser};
 
 impl Analyser {
     pub fn get_unit(&self, expr: &UnitExpr) -> Result<Unit, String> {
@@ -27,79 +26,11 @@ impl Analyser {
             }
             UnitExpr::Power { base, exponent } => {
                 let b = self.get_unit(base)?;
-                Ok(b.powr(*exponent))
+                Ok(b.mul(*exponent))
             }
         }
     }
 }
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Dimension {
-    // Represented as [kg, m, s, A, K, mol, cd]
-    pub exponents: [i8; 7],
-}
-
-impl Dimension {
-    pub fn new(exponents: [i8; 7]) -> Self {
-        Self { exponents }
-    }
-
-    pub fn add(&self, other: &Self) -> Self {
-        let mut result = [0; 7];
-        for i in 0..7 {
-            result[i] = self.exponents[i] + other.exponents[i];
-        }
-        Self::new(result)
-    }
-
-    pub fn sub(&self, other: &Self) -> Self {
-        let mut result = [0; 7];
-        for i in 0..7 {
-            result[i] = self.exponents[i] - other.exponents[i];
-        }
-        Self::new(result)
-    }
-
-    pub fn powr(&self, n: f64) -> Self {
-        let mut result = [0; 7];
-        for i in 0..7 {
-            result[i] = (self.exponents[i] as f64 * n) as i8;
-        }
-        Self::new(result)
-    }
-
-    pub fn is_dimensionless(&self) -> bool {
-        self.exponents.iter().all(|e| *e == 0)
-    }
-}
-
-impl fmt::Display for Dimension {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let names = ["kg", "m", "s", "A", "K", "mol", "cd"];
-
-        if self.is_dimensionless() {
-            return write!(f, "1");
-        }
-
-        let res: Vec<String> = self
-            .exponents
-            .iter()
-            .zip(names.iter())
-            .filter_map(|(&exp, &name)| {
-                if exp == 0 {
-                    None
-                } else if exp == 1 {
-                    Some(name.to_string())
-                } else {
-                    Some(format!("{}^{}", name, exp))
-                }
-            })
-            .collect();
-
-        write!(f, "{}", res.join("•"))
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct Unit {
     allows_prefix: bool,
@@ -141,7 +72,7 @@ impl Unit {
     }
 
     pub fn is_dimensionless(&self) -> bool {
-        self.dimension.exponents.iter().all(|&x| x == 0)
+        self.dimension.is_dimensionless()
     }
 
     pub fn add(&self, other: &Unit) -> Self {
@@ -164,8 +95,8 @@ impl Unit {
         }
     }
 
-    pub fn powr(&self, n: f64) -> Self {
-        let dimension = self.dimension.powr(n);
+    pub fn mul(&self, n: f64) -> Self {
+        let dimension = self.dimension.mul(n);
 
         Unit {
             dimension,
@@ -418,12 +349,5 @@ mod tests {
         let expr = UnitExpr::Symbol("foo".to_string());
         let res = ctx.get_unit(&expr);
         assert!(res.is_err());
-    }
-
-    #[test]
-    fn test_dimension_display() {
-        let expected = "kg•m^2•s^3•A^4•K^5•mol^6•cd^7";
-        let actual = Dimension::new([1, 2, 3, 4, 5, 6, 7]).to_string();
-        assert_eq!(expected, actual);
     }
 }
