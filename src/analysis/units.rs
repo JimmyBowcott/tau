@@ -1,30 +1,33 @@
-use std::{fmt, collections::{HashMap, HashSet}};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 
 use crate::ast::{UnitExpr, UnitOp};
 
 use super::Analyser;
 
 impl Analyser {
-    pub fn get_dimension(&self, expr: &UnitExpr) -> Result<Dimension, String> {
+    pub fn get_unit(&self, expr: &UnitExpr) -> Result<Unit, String> {
         match expr {
             UnitExpr::Symbol(name) => {
-                let unit = self.units.get_dimension(name);
+                let unit = self.units.get_unit(name);
                 match unit {
                     Some(u) => Ok(u),
                     None => Err(format!("Unknown unit {}", name)),
                 }
             }
             UnitExpr::Binary { left, op, right } => {
-                let l = self.get_dimension(left)?;
-                let r = self.get_dimension(right)?;
+                let l = self.get_unit(left)?;
+                let r = self.get_unit(right)?;
                 Ok(match op {
                     UnitOp::Multiply => l.add(&r),
                     UnitOp::Divide => l.sub(&r),
                 })
             }
             UnitExpr::Power { base, exponent } => {
-                let b = self.get_dimension(base)?;
-                Ok(b.scale(*exponent))
+                let b = self.get_unit(base)?;
+                Ok(b.powr(*exponent))
             }
         }
     }
@@ -57,7 +60,7 @@ impl Dimension {
         Self::new(result)
     }
 
-    pub fn scale(&self, n: f64) -> Self {
+    pub fn powr(&self, n: f64) -> Self {
         let mut result = [0; 7];
         for i in 0..7 {
             result[i] = (self.exponents[i] as f64 * n) as i8;
@@ -75,7 +78,7 @@ impl fmt::Display for Dimension {
         let names = ["kg", "m", "s", "A", "K", "mol", "cd"];
 
         if self.is_dimensionless() {
-            return write!(f, "1")
+            return write!(f, "1");
         }
 
         let res: Vec<String> = self
@@ -91,17 +94,17 @@ impl fmt::Display for Dimension {
                     Some(format!("{}^{}", name, exp))
                 }
             })
-        .collect();
+            .collect();
 
         write!(f, "{}", res.join("•"))
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Unit {
-    pub dimension: Dimension,
-    pub allows_prefix: bool,
-    pub scale: f64,
+    allows_prefix: bool,
+    dimension: Dimension,
+    scale: f64,
 }
 
 impl Unit {
@@ -139,6 +142,48 @@ impl Unit {
 
     pub fn is_dimensionless(&self) -> bool {
         self.dimension.exponents.iter().all(|&x| x == 0)
+    }
+
+    pub fn add(&self, other: &Unit) -> Self {
+        let dimension = self.dimension.add(&other.dimension);
+
+        Unit {
+            dimension,
+            allows_prefix: self.allows_prefix,
+            scale: self.scale,
+        }
+    }
+
+    pub fn sub(&self, other: &Unit) -> Self {
+        let dimension = self.dimension.sub(&other.dimension);
+
+        Unit {
+            dimension,
+            allows_prefix: self.allows_prefix,
+            scale: self.scale,
+        }
+    }
+
+    pub fn powr(&self, n: f64) -> Self {
+        let dimension = self.dimension.powr(n);
+
+        Unit {
+            dimension,
+            allows_prefix: self.allows_prefix,
+            scale: self.scale,
+        }
+    }
+}
+
+impl PartialEq for Unit {
+    fn eq(&self, rhs: &Unit) -> bool {
+        self.scale == rhs.scale && self.dimension == rhs.dimension
+    }
+}
+
+impl fmt::Display for Unit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.dimension.fmt(f)
     }
 }
 
@@ -245,9 +290,9 @@ impl UnitTable {
         }
     }
 
-    pub fn get_dimension(&self, name: &str) -> Option<Dimension> {
+    pub fn get_unit(&self, name: &str) -> Option<Unit> {
         match self.name_to_base_components.get(name) {
-            Some(unit) => Some(unit.dimension.clone()),
+            Some(unit) => Some(unit.clone()),
             None => None,
         }
     }
@@ -301,8 +346,8 @@ mod tests {
     fn test_symbol() {
         let ctx = Analyser::new();
         let expr = UnitExpr::Symbol("m".to_string());
-        let dim = ctx.get_dimension(&expr).unwrap();
-        assert_eq!(dim, Dimension::new([0, 1, 0, 0, 0, 0, 0]));
+        let unit = ctx.get_unit(&expr).unwrap();
+        assert_eq!(unit, Unit::new([0, 1, 0, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -313,8 +358,8 @@ mod tests {
             op: UnitOp::Multiply,
             right: Box::new(UnitExpr::Symbol("s".to_string())),
         };
-        let dim = ctx.get_dimension(&expr).unwrap();
-        assert_eq!(dim, Dimension::new([0, 0, 1, 1, 0, 0, 0]));
+        let unit = ctx.get_unit(&expr).unwrap();
+        assert_eq!(unit, Unit::new([0, 0, 1, 1, 0, 0, 0]));
     }
 
     #[test]
@@ -325,8 +370,8 @@ mod tests {
             op: UnitOp::Divide,
             right: Box::new(UnitExpr::Symbol("s".to_string())),
         };
-        let dim = ctx.get_dimension(&expr).unwrap();
-        assert_eq!(dim, Dimension::new([0, 1, -1, 0, 0, 0, 0]));
+        let unit = ctx.get_unit(&expr).unwrap();
+        assert_eq!(unit, Unit::new([0, 1, -1, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -336,18 +381,17 @@ mod tests {
             base: Box::new(UnitExpr::Symbol("cd".to_string())),
             exponent: 2.0,
         };
-        let dim = ctx.get_dimension(&expr).unwrap();
-        assert_eq!(dim, Dimension::new([0, 0, 0, 0, 0, 0, 2]));
+        let unit = ctx.get_unit(&expr).unwrap();
+        assert_eq!(unit, Unit::new([0, 0, 0, 0, 0, 0, 2]));
     }
 
     #[test]
     fn test_derived_symbol() {
         let ctx = Analyser::new();
         let expr = UnitExpr::Symbol("N".to_string());
-        let dim = ctx.get_dimension(&expr).unwrap();
-        assert_eq!(dim, Dimension::new([1, 1, -2, 0, 0, 0, 0]));
+        let unit = ctx.get_unit(&expr).unwrap();
+        assert_eq!(unit, Unit::new([1, 1, -2, 0, 0, 0, 0]));
     }
-
 
     #[test]
     fn test_complex_expr() {
@@ -364,15 +408,15 @@ mod tests {
                 exponent: 2.0,
             }),
         };
-        let dim = ctx.get_dimension(&expr).unwrap();
-        assert_eq!(dim, Dimension::new([2, 4, -4, 0, 0, 0, 0]));
+        let unit = ctx.get_unit(&expr).unwrap();
+        assert_eq!(unit, Unit::new([2, 4, -4, 0, 0, 0, 0]));
     }
 
     #[test]
     fn test_unknown_unit() {
         let ctx = Analyser::new();
         let expr = UnitExpr::Symbol("foo".to_string());
-        let res = ctx.get_dimension(&expr);
+        let res = ctx.get_unit(&expr);
         assert!(res.is_err());
     }
 

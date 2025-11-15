@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::{
-    analysis::{Analyser, units::Dimension},
+    analysis::{units::Unit, Analyser},
     runtime::Env,
 };
 
@@ -90,7 +90,7 @@ impl Expr {
 
     pub fn validate(&self, ctx: &mut Analyser) -> Result<(), String> {
         self.check_declared(ctx)?;
-        self.check_dimension(ctx)?;
+        self.check_unit(ctx)?;
         Ok(())
     }
 
@@ -105,18 +105,18 @@ impl Expr {
         }
     }
 
-    fn check_dimension(&self, ctx: &mut Analyser) -> Result<Dimension, String> {
+    fn check_unit(&self, ctx: &mut Analyser) -> Result<Unit, String> {
         match self {
-            Expr::Number(_) => Ok(Dimension::new([0; 7])),
+            Expr::Number(_) => Ok(Unit::new([0; 7])),
 
             Expr::Identifier(name) => ctx
                 .symbols
-                .get_dimension(name)
+                .get_unit(name)
                 .ok_or_else(|| format!("Undeclared variable '{}'", name)),
 
             Expr::Binary { left, op, right } => {
-                let ldim = left.check_dimension(ctx)?;
-                let rdim = right.check_dimension(ctx)?;
+                let ldim = left.check_unit(ctx)?;
+                let rdim = right.check_unit(ctx)?;
 
                 match op {
                     BinaryOp::Add | BinaryOp::Subtract => {
@@ -143,7 +143,7 @@ impl Expr {
                                 ));
                             }
                             let n = exp_val as i32;
-                            Ok(ldim.scale(n as f64))
+                            Ok(ldim.powr(n as f64))
                         }
                         _ => Err("Exponent must be a dimensionless numeric literal".into()),
                     },
@@ -191,12 +191,12 @@ impl Stmt {
                     u.validate(ctx)?;
                 }
 
-                let dimension = match unit {
-                    Some(u) => ctx.get_dimension(u)?,
-                    None => Dimension::new([0; 7]),
+                let unit = match unit {
+                    Some(u) => ctx.get_unit(u)?,
+                    None => Unit::new([0; 7]),
                 };
 
-                ctx.symbols.declare(name, dimension)?;
+                ctx.symbols.declare(name, unit)?;
                 value.validate(ctx)?;
                 ctx.symbols.define(name);
                 Ok(())
@@ -208,7 +208,7 @@ impl Stmt {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{BinaryOp, Expr, Stmt, Dimension};
+    use crate::ast::{BinaryOp, Expr, Stmt, Unit};
     use crate::analysis::Analyser;
     use crate::runtime::Env;
 
@@ -286,15 +286,15 @@ mod tests {
 
     fn setup_analyser() -> Analyser {
         let mut analyser = Analyser::new();
-        analyser.symbols.declare("mass", Dimension::new([1, 0, 0, 0, 0, 0, 0])).unwrap();      // kg
+        analyser.symbols.declare("mass", Unit::new([1, 0, 0, 0, 0, 0, 0])).unwrap();      // kg
         analyser.symbols.define("mass");
-        analyser.symbols.declare("accel", Dimension::new([0, 1, -2, 0, 0, 0, 0])).unwrap();    // m·s⁻²
+        analyser.symbols.declare("accel", Unit::new([0, 1, -2, 0, 0, 0, 0])).unwrap();    // m·s⁻²
         analyser.symbols.define("accel");
-        analyser.symbols.declare("force", Dimension::new([1, 1, -2, 0, 0, 0, 0])).unwrap();    // kg·m·s⁻² (N)
+        analyser.symbols.declare("force", Unit::new([1, 1, -2, 0, 0, 0, 0])).unwrap();    // kg·m·s⁻² (N)
         analyser.symbols.define("force");
-        analyser.symbols.declare("pressure", Dimension::new([1, -1, -2, 0, 0, 0, 0])).unwrap(); // kg·m⁻¹·s⁻² (Pa)
+        analyser.symbols.declare("pressure", Unit::new([1, -1, -2, 0, 0, 0, 0])).unwrap(); // kg·m⁻¹·s⁻² (Pa)
         analyser.symbols.define("pressure");
-        analyser.symbols.declare("area", Dimension::new([0, 2, 0, 0, 0, 0, 0])).unwrap();       // m²
+        analyser.symbols.declare("area", Unit::new([0, 2, 0, 0, 0, 0, 0])).unwrap();       // m²
         analyser.symbols.define("area");
         analyser
     }
@@ -303,14 +303,14 @@ mod tests {
     fn number_is_dimensionless() {
         let expr = Expr::Number(9.81);
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([0; 7]));
+        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([0; 7]));
     }
 
     #[test]
     fn variable_dimension_matches_declaration() {
         let expr = Expr::Identifier("mass".into());
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([1, 0, 0, 0, 0, 0, 0]));
+        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([1, 0, 0, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -321,7 +321,7 @@ mod tests {
             right: Box::new(Expr::Identifier("force".into())),
         };
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([1, 1, -2, 0, 0, 0, 0]));
+        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([1, 1, -2, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -332,7 +332,7 @@ mod tests {
             right: Box::new(Expr::Identifier("force".into())),
         };
         let mut ctx = setup_analyser();
-        let err = expr.check_dimension(&mut ctx).unwrap_err();
+        let err = expr.check_unit(&mut ctx).unwrap_err();
         assert!(err.contains("Unit mismatch"));
     }
 
@@ -344,7 +344,7 @@ mod tests {
             right: Box::new(Expr::Identifier("accel".into())),
         };
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([1, 1, -2, 0, 0, 0, 0]));
+        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([1, 1, -2, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -355,7 +355,7 @@ mod tests {
             right: Box::new(Expr::Identifier("area".into())),
         };
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([1, -1, -2, 0, 0, 0, 0]));
+        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([1, -1, -2, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -366,7 +366,7 @@ mod tests {
             right: Box::new(Expr::Number(2.0)),
         };
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_dimension(&mut ctx).unwrap(), Dimension::new([0, 4, 0, 0, 0, 0, 0]));
+        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([0, 4, 0, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -377,7 +377,7 @@ mod tests {
             right: Box::new(Expr::Number(0.5)),
         };
         let mut ctx = setup_analyser();
-        let err = expr.check_dimension(&mut ctx).unwrap_err();
+        let err = expr.check_unit(&mut ctx).unwrap_err();
         assert!(err.contains("Non-integer exponent"));
     }
 }

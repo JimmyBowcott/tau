@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use super::units::Dimension;
+use super::units::Unit;
 
 #[derive(Debug)]
 pub struct Var {
     defined: bool,
-    unit: Dimension,
+    unit: Unit,
 }
 
 #[derive(Debug, Default)]
@@ -20,11 +20,11 @@ impl SymbolTable {
         }
     }
 
-    pub fn get_dimension(&self, name: &str) -> Option<Dimension> {
+    pub fn get_unit(&self, name: &str) -> Option<Unit> {
         self.vars.get(name).map(|v| v.unit.clone())
     }
 
-    pub fn declare(&mut self, name: &str, unit: Dimension) -> Result<(), String> {
+    pub fn declare(&mut self, name: &str, unit: Unit) -> Result<(), String> {
         if self.vars.contains_key(name) {
             return Err(format!("Variable '{}' already declared", name));
         }
