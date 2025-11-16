@@ -1,10 +1,228 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-};
+use std::{collections::HashMap, fmt};
 
+use super::{Analyser, dimension::Dimension};
 use crate::ast::{UnitExpr, UnitOp};
-use super::{dimension::Dimension, Analyser};
+
+#[derive(Clone, Debug)]
+pub struct Unit {
+    allows_prefix: bool,
+    dimension: Dimension,
+    scale: f64,
+}
+
+struct UnitWithName {
+    name: &'static str,
+    exponents: [i8; 7],
+    scale: f64,
+    allows_prefix: bool,
+}
+
+pub struct UnitTable {
+    name_to_base_components: HashMap<&'static str, Unit>,
+    base_components_to_name: HashMap<[i8; 7], &'static str>,
+    prefixes_to_scale: HashMap<&'static str, f64>,
+}
+
+const UNITS: &[UnitWithName] = &[
+    UnitWithName {
+        name: "kg",
+        exponents: [1, 0, 0, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: false,
+    },
+    UnitWithName {
+        name: "m",
+        exponents: [0, 1, 0, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "s",
+        exponents: [0, 0, 1, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "g",
+        exponents: [1, 0, 0, 0, 0, 0, 0],
+        scale: 0.01,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "A",
+        exponents: [0, 0, 0, 1, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "K",
+        exponents: [0, 0, 0, 0, 1, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "mol",
+        exponents: [0, 0, 0, 0, 0, 1, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "cd",
+        exponents: [0, 0, 0, 0, 0, 0, 1],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "rad",
+        exponents: [0, 0, 0, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "sr",
+        exponents: [0, 0, 0, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "Hz",
+        exponents: [0, 0, -1, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "N",
+        exponents: [1, 1, -2, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "Pa",
+        exponents: [1, -1, -2, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "J",
+        exponents: [1, 2, -2, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "W",
+        exponents: [1, 2, -3, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "C",
+        exponents: [0, 0, 1, 1, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "V",
+        exponents: [1, 2, -3, -1, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "F",
+        exponents: [-1, -2, 4, 2, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "Ω",
+        exponents: [1, 2, -3, -2, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "S",
+        exponents: [-1, -2, 3, 2, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "Wb",
+        exponents: [1, 2, -2, -1, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "T",
+        exponents: [1, 0, -2, -1, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "H",
+        exponents: [1, 2, -2, -2, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "lm",
+        exponents: [0, 0, 0, 0, 0, 0, 1],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "lx",
+        exponents: [0, -2, 0, 0, 0, 0, 1],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "Bq",
+        exponents: [0, 0, -1, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "Gy",
+        exponents: [0, 2, -2, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "Sv",
+        exponents: [0, 2, -2, 0, 0, 0, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+    UnitWithName {
+        name: "kat",
+        exponents: [0, 0, -1, 0, 0, 1, 0],
+        scale: 1.0,
+        allows_prefix: true,
+    },
+];
+
+const PREFIXES: &[(&'static str, f64)] = &[
+    ("Y", 1e24),
+    ("Z", 1e21),
+    ("E", 1e18),
+    ("P", 1e15),
+    ("T", 1e12),
+    ("G", 1e9),
+    ("M", 1e6),
+    ("k", 1e3),
+    ("h", 1e2),
+    ("da", 1e1),
+    ("d", 1e-1),
+    ("c", 1e-2),
+    ("m", 1e-3),
+    ("u", 1e-6),
+    ("µ", 1e-6),
+    ("n", 1e-9),
+    ("p", 1e-12),
+    ("f", 1e-15),
+    ("a", 1e-18),
+    ("z", 1e-21),
+    ("y", 1e-24),
+];
 
 impl Analyser {
     pub fn get_unit(&self, expr: &UnitExpr) -> Result<Unit, String> {
@@ -31,12 +249,6 @@ impl Analyser {
         }
     }
 }
-#[derive(Clone, Debug)]
-pub struct Unit {
-    allows_prefix: bool,
-    dimension: Dimension,
-    scale: f64,
-}
 
 impl Unit {
     pub fn new(exponents: [i8; 7]) -> Self {
@@ -59,6 +271,14 @@ impl Unit {
         Self {
             dimension: Dimension::new(exponents),
             allows_prefix: true,
+            scale,
+        }
+    }
+
+    pub fn with_prefix_scale(exponents: [i8; 7], scale: f64, allows_prefix: bool) -> Self {
+        Self {
+            dimension: Dimension::new(exponents),
+            allows_prefix,
             scale,
         }
     }
@@ -118,78 +338,24 @@ impl fmt::Display for Unit {
     }
 }
 
-pub struct UnitTable {
-    name_to_base_components: HashMap<&'static str, Unit>,
-    base_components_to_name: HashMap<[i8; 7], &'static str>,
-    prefixes: HashSet<&'static str>,
-}
-
 impl UnitTable {
     pub fn new() -> Self {
         let mut name_to_base_components = HashMap::new();
         let mut base_components_to_name = HashMap::new();
 
-        macro_rules! unit {
-            ($name:expr, [$($e:expr),*]) => {{
-                let dim = Unit::new([$($e),*]);
-                name_to_base_components.insert($name, dim.clone());
-                base_components_to_name.insert(dim.dimension.exponents, $name);
-            }};
-            ($name:expr, [$($e:expr),*], $allows_prefix:expr) => {{
-                let dim = Unit::with_prefix([$($e),*], $allows_prefix);
-                name_to_base_components.insert($name, dim.clone());
-                base_components_to_name.insert(dim.exponents, $name);
-            }};
+        for def in UNITS {
+            let unit = Unit::with_prefix_scale(def.exponents, def.scale, def.allows_prefix);
+
+            name_to_base_components.insert(def.name, unit.clone());
+            base_components_to_name.insert(def.exponents, def.name);
         }
 
-        unit!("m", [0, 1, 0, 0, 0, 0, 0]);
-        unit!("s", [0, 0, 1, 0, 0, 0, 0]);
-        unit!("A", [0, 0, 0, 1, 0, 0, 0]);
-        unit!("K", [0, 0, 0, 0, 1, 0, 0]);
-        unit!("mol", [0, 0, 0, 0, 0, 1, 0]);
-        unit!("cd", [0, 0, 0, 0, 0, 0, 1]);
-
-        let kg = Unit::with_prefix([1, 0, 0, 0, 0, 0, 0], false);
-        name_to_base_components.insert("kg", kg.clone());
-        base_components_to_name.insert(kg.dimension.exponents, "kg");
-
-        let g = Unit::with_scale([1, 0, 0, 0, 0, 0, 0], 0.01);
-        name_to_base_components.insert("g", g.clone());
-        base_components_to_name.insert(g.dimension.exponents, "g");
-
-        unit!("rad", [0, 0, 0, 0, 0, 0, 0]);
-        unit!("sr", [0, 0, 0, 0, 0, 0, 0]);
-        unit!("Hz", [0, 0, -1, 0, 0, 0, 0]);
-        unit!("N", [1, 1, -2, 0, 0, 0, 0]);
-        unit!("Pa", [1, -1, -2, 0, 0, 0, 0]);
-        unit!("J", [1, 2, -2, 0, 0, 0, 0]);
-        unit!("W", [1, 2, -3, 0, 0, 0, 0]);
-        unit!("C", [0, 0, 1, 1, 0, 0, 0]);
-        unit!("V", [1, 2, -3, -1, 0, 0, 0]);
-        unit!("F", [-1, -2, 4, 2, 0, 0, 0]);
-        unit!("Ω", [1, 2, -3, -2, 0, 0, 0]);
-        unit!("S", [-1, -2, 3, 2, 0, 0, 0]);
-        unit!("Wb", [1, 2, -2, -1, 0, 0, 0]);
-        unit!("T", [1, 0, -2, -1, 0, 0, 0]);
-        unit!("H", [1, 2, -2, -2, 0, 0, 0]);
-        unit!("lm", [0, 0, 0, 0, 0, 0, 1]);
-        unit!("lx", [0, -2, 0, 0, 0, 0, 1]);
-        unit!("Bq", [0, 0, -1, 0, 0, 0, 0]);
-        unit!("Gy", [0, 2, -2, 0, 0, 0, 0]);
-        unit!("Sv", [0, 2, -2, 0, 0, 0, 0]);
-        unit!("kat", [0, 0, -1, 0, 0, 1, 0]);
-
-        let prefixes: HashSet<&'static str> = [
-            "Y", "Z", "E", "P", "T", "G", "M", "k", "h", "da", "d", "c", "m", "u", "µ", "n", "p",
-            "f", "a", "z", "y",
-        ]
-        .into_iter()
-        .collect();
+        let prefixes_to_scale = PREFIXES.iter().cloned().collect();
 
         Self {
             name_to_base_components,
             base_components_to_name,
-            prefixes,
+            prefixes_to_scale,
         }
     }
 
@@ -229,8 +395,8 @@ impl UnitTable {
     }
 
     fn split_prefix<'a>(&self, value: &'a str) -> Option<(&'a str, &'a str)> {
-        self.prefixes
-            .iter()
+        self.prefixes_to_scale
+            .keys()
             .find_map(|prefix| value.strip_prefix(prefix).map(|rest| (*prefix, rest)))
     }
 }
