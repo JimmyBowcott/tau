@@ -5,22 +5,49 @@ use super::{units::Unit, Analyser};
 impl Expr {
     pub fn validate(&self, ctx: &mut Analyser) -> Result<(), String> {
         self.check_declared(ctx)?;
-        self.check_unit(ctx)?;
+        self.check_unit_maths(ctx)?;
         Ok(())
     }
 
-    fn check_declared(&self, ctx: &mut Analyser) -> Result<(), String> {
+    pub fn check_declared(&self, ctx: &mut Analyser) -> Result<(), String> {
         match self {
             Expr::Number(_) => Ok(()),
             Expr::Identifier(name) => ctx.symbols.check_declared(name),
             Expr::Binary { left, right, .. } => {
-                left.validate(ctx)?;
-                right.validate(ctx)
+                left.check_declared(ctx)?;
+                right.check_declared(ctx)
             }
         }
     }
 
+    pub fn assert_unit(&self, ctx: &mut Analyser, unit: &Unit) -> Result<(), String> {
+        let found_unit = self.check_unit(ctx)?;
+
+        if !self.assert_equal(unit, &found_unit) {
+            return Err(format!("Expected {}, found {}", unit, found_unit))
+        }
+
+        Ok(())
+    }
+
+    fn check_unit_maths(&self, ctx: &mut Analyser) -> Result<(), String> {
+        self.check_unit(ctx)?;
+        Ok(())
+    }
+
+    fn assert_equal(&self, unit_1: &Unit, unit_2: &Unit) -> bool {
+        let dimensionless = &Unit::new([0; 7]);
+
+        if unit_1 == unit_2 || unit_1 == dimensionless || unit_2 == dimensionless {
+            true
+        } else {
+            false
+        }
+
+    }
+
     fn check_unit(&self, ctx: &mut Analyser) -> Result<Unit, String> {
+        let dimensionless = Unit::new([0; 7]);
         match self {
             Expr::Number(_) => Ok(Unit::new([0; 7])),
 
@@ -35,7 +62,7 @@ impl Expr {
 
                 match op {
                     BinaryOp::Add | BinaryOp::Subtract => {
-                        if ldim == rdim {
+                        if ldim == rdim || ldim == dimensionless || rdim == dimensionless {
                             Ok(ldim)
                         } else {
                             Err(format!(

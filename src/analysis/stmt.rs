@@ -15,8 +15,9 @@ impl Stmt {
                     None => Unit::new([0; 7]),
                 };
 
+                value.check_declared(ctx)?;
+                value.assert_unit(ctx, &unit)?;
                 ctx.symbols.declare(name, unit)?;
-                value.validate(ctx)?;
                 ctx.symbols.define(name);
                 Ok(())
             }
