@@ -1,6 +1,6 @@
 use crate::ast::Stmt;
 
-use super::{units::Unit, Analyser};
+use super::Analyser;
 
 impl Stmt {
     pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), String> {
@@ -12,7 +12,7 @@ impl Stmt {
 
                 let unit = match unit {
                     Some(u) => ctx.get_unit(u)?,
-                    None => Unit::new([0; 7]),
+                    None => value.get_unit(ctx)?,
                 };
 
                 value.check_declared(ctx)?;

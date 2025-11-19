@@ -21,7 +21,7 @@ impl Expr {
     }
 
     pub fn assert_unit(&self, ctx: &mut Analyser, unit: &Unit) -> Result<(), String> {
-        let found_unit = self.check_unit(ctx)?;
+        let found_unit = self.get_unit(ctx)?;
 
         if !self.assert_equal(unit, &found_unit) {
             return Err(format!("Expected {}, found {}", unit, found_unit))
@@ -30,23 +30,7 @@ impl Expr {
         Ok(())
     }
 
-    fn check_unit_maths(&self, ctx: &mut Analyser) -> Result<(), String> {
-        self.check_unit(ctx)?;
-        Ok(())
-    }
-
-    fn assert_equal(&self, unit_1: &Unit, unit_2: &Unit) -> bool {
-        let dimensionless = &Unit::new([0; 7]);
-
-        if unit_1 == unit_2 || unit_1 == dimensionless || unit_2 == dimensionless {
-            true
-        } else {
-            false
-        }
-
-    }
-
-    fn check_unit(&self, ctx: &mut Analyser) -> Result<Unit, String> {
+    pub fn get_unit(&self, ctx: &mut Analyser) -> Result<Unit, String> {
         let dimensionless = Unit::new([0; 7]);
         match self {
             Expr::Number(_) => Ok(Unit::new([0; 7])),
@@ -57,8 +41,8 @@ impl Expr {
                 .ok_or_else(|| format!("Undeclared variable '{}'", name)),
 
             Expr::Binary { left, op, right } => {
-                let ldim = left.check_unit(ctx)?;
-                let rdim = right.check_unit(ctx)?;
+                let ldim = left.get_unit(ctx)?;
+                let rdim = right.get_unit(ctx)?;
 
                 match op {
                     BinaryOp::Add | BinaryOp::Subtract => {
@@ -92,6 +76,22 @@ impl Expr {
                 }
             }
         }
+    }
+
+    fn check_unit_maths(&self, ctx: &mut Analyser) -> Result<(), String> {
+        self.get_unit(ctx)?;
+        Ok(())
+    }
+
+    fn assert_equal(&self, unit_1: &Unit, unit_2: &Unit) -> bool {
+        let dimensionless = &Unit::new([0; 7]);
+
+        if unit_1 == unit_2 || unit_1 == dimensionless || unit_2 == dimensionless {
+            true
+        } else {
+            false
+        }
+
     }
 }
 
@@ -132,14 +132,14 @@ mod tests {
     fn number_is_dimensionless() {
         let expr = Expr::Number(9.81);
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([0; 7]));
+        assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([0; 7]));
     }
 
     #[test]
     fn variable_dimension_matches_declaration() {
         let expr = Expr::Identifier("mass".into());
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([1, 0, 0, 0, 0, 0, 0]));
+        assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([1, 0, 0, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -150,7 +150,7 @@ mod tests {
             right: Box::new(Expr::Identifier("force".into())),
         };
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([1, 1, -2, 0, 0, 0, 0]));
+        assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([1, 1, -2, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -161,7 +161,7 @@ mod tests {
             right: Box::new(Expr::Identifier("force".into())),
         };
         let mut ctx = setup_analyser();
-        let err = expr.check_unit(&mut ctx).unwrap_err();
+        let err = expr.get_unit(&mut ctx).unwrap_err();
         assert!(err.contains("Unit mismatch"));
     }
 
@@ -173,7 +173,7 @@ mod tests {
             right: Box::new(Expr::Identifier("accel".into())),
         };
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([1, 1, -2, 0, 0, 0, 0]));
+        assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([1, 1, -2, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -184,7 +184,7 @@ mod tests {
             right: Box::new(Expr::Identifier("area".into())),
         };
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([1, -1, -2, 0, 0, 0, 0]));
+        assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([1, -1, -2, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -195,7 +195,7 @@ mod tests {
             right: Box::new(Expr::Number(2.0)),
         };
         let mut ctx = setup_analyser();
-        assert_eq!(expr.check_unit(&mut ctx).unwrap(), Unit::new([0, 4, 0, 0, 0, 0, 0]));
+        assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([0, 4, 0, 0, 0, 0, 0]));
     }
 
     #[test]
@@ -206,7 +206,7 @@ mod tests {
             right: Box::new(Expr::Number(0.5)),
         };
         let mut ctx = setup_analyser();
-        let err = expr.check_unit(&mut ctx).unwrap_err();
+        let err = expr.get_unit(&mut ctx).unwrap_err();
         assert!(err.contains("Non-integer exponent"));
     }
 }
