@@ -54,7 +54,9 @@ impl Lexer {
     fn skip_line(&mut self) {
         while let Some(c) = self.peek() {
             self.advance();
-            if c == '\n' { break; }
+            if c == '\n' {
+                break;
+            }
         }
     }
 
@@ -107,10 +109,30 @@ impl Lexer {
             "for" => Some(TokenKind::For),
             "while" => Some(TokenKind::While),
             "print" => Some(TokenKind::Print),
-            _ => {
-                Some(TokenKind::Identifier(identifier))
+            _ => Some(TokenKind::Identifier(identifier)),
+        }
+    }
+
+    fn lex_string(&mut self) -> String {
+        let mut s = String::new();
+        while let Some(c) = self.advance() {
+            match c {
+                '"' => break,
+                '\\' => {
+                    if let Some(next) = self.advance() {
+                        s.push(match next {
+                            'n' => '\n',
+                            't' => '\t',
+                            '"' => '"',
+                            '\\' => '\\',
+                            other => other,
+                        });
+                    }
+                }
+                other => s.push(other),
             }
         }
+        s
     }
 
     pub fn next_token(&mut self) -> Option<Token> {
@@ -131,6 +153,10 @@ impl Lexer {
             ')' => Some(TokenKind::RParen),
             '{' => Some(TokenKind::LBrace),
             '}' => Some(TokenKind::RBrace),
+            '"' => {
+                let s = self.lex_string();
+                Some(TokenKind::String(s))
+            }
             c if c.is_ascii_digit() => {
                 let num = self.scan_number(c);
                 Some(TokenKind::Number(num.parse().unwrap()))
@@ -213,13 +239,19 @@ mod tests {
     fn test_match_identifier_keywords() {
         let lexer = Lexer::new("");
         assert_eq!(lexer.match_identifier("let".into()), Some(TokenKind::Let));
-        assert_eq!(lexer.match_identifier("print".into()), Some(TokenKind::Print));
+        assert_eq!(
+            lexer.match_identifier("print".into()),
+            Some(TokenKind::Print)
+        );
     }
 
     #[test]
     fn test_match_identifier_non_keyword() {
         let lexer = Lexer::new("");
-        assert_eq!(lexer.match_identifier("force".into()), Some(TokenKind::Identifier("force".into())));
+        assert_eq!(
+            lexer.match_identifier("force".into()),
+            Some(TokenKind::Identifier("force".into()))
+        );
     }
 
     fn check_tokens(input: &str, expected: Vec<TokenKind>) {
@@ -233,9 +265,18 @@ mod tests {
     #[test]
     fn next_token_single_char() {
         let expected = vec![
-            TokenKind::Equal, TokenKind::Semicolon, TokenKind::Plus, TokenKind::Minus,
-            TokenKind::Star, TokenKind::Slash, TokenKind::Caret, TokenKind::Colon,
-            TokenKind::LParen, TokenKind::RParen, TokenKind::LBrace, TokenKind::RBrace,
+            TokenKind::Equal,
+            TokenKind::Semicolon,
+            TokenKind::Plus,
+            TokenKind::Minus,
+            TokenKind::Star,
+            TokenKind::Slash,
+            TokenKind::Caret,
+            TokenKind::Colon,
+            TokenKind::LParen,
+            TokenKind::RParen,
+            TokenKind::LBrace,
+            TokenKind::RBrace,
         ];
         check_tokens("= ; + - * / ^ : ( ) { }", expected);
     }
@@ -273,6 +314,53 @@ mod tests {
                 TokenKind::Number(1.0),
                 TokenKind::Number(2.0),
                 TokenKind::Number(3.0),
+            ],
+        );
+    }
+
+    #[test]
+    fn test_string_literals() {
+        check_tokens(
+            r#"let s = "hello world"; print("line\nbreak");"#,
+            vec![
+                TokenKind::Let,
+                TokenKind::Identifier("s".into()),
+                TokenKind::Equal,
+                TokenKind::String("hello world".into()),
+                TokenKind::Semicolon,
+                TokenKind::Print,
+                TokenKind::LParen,
+                TokenKind::String("line\nbreak".into()),
+                TokenKind::RParen,
+                TokenKind::Semicolon,
+            ],
+        );
+    }
+
+    #[test]
+    fn test_comment_inside_string() {
+        check_tokens(
+            r#"let s = "this is # not a comment";"#,
+            vec![
+                TokenKind::Let,
+                TokenKind::Identifier("s".into()),
+                TokenKind::Equal,
+                TokenKind::String("this is # not a comment".into()),
+                TokenKind::Semicolon,
+            ],
+        );
+    }
+
+    #[test]
+    fn test_escape_sequences() {
+        check_tokens(
+            r#"let s = "line1\nline2\tend\"quote\"";"#,
+            vec![
+                TokenKind::Let,
+                TokenKind::Identifier("s".into()),
+                TokenKind::Equal,
+                TokenKind::String("line1\nline2\tend\"quote\"".into()),
+                TokenKind::Semicolon,
             ],
         );
     }

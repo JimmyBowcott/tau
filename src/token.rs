@@ -24,6 +24,7 @@ pub enum TokenKind {
     RParen,
     LBrace,
     RBrace,
+    String(String),
 }
 
 #[derive(Debug)]
