@@ -48,7 +48,7 @@ impl SymbolTable {
         if self.vars.contains_key(name) {
             Ok(())
         } else {
-            Err(format!("Variable '{}' used before declaration", name))
+            Err(format!("Undeclared variable '{}'", name))
         }
     }
 }

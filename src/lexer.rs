@@ -51,10 +51,19 @@ impl Lexer {
         }
     }
 
-    fn next_word(&mut self) {
+    fn skip_line(&mut self) {
+        while let Some(c) = self.peek() {
+            self.advance();
+            if c == '\n' { break; }
+        }
+    }
+
+    fn skip_whitespace_and_comments(&mut self) {
         while let Some(c) = self.peek() {
             if c.is_whitespace() {
                 self.advance();
+            } else if c == '#' {
+                self.skip_line();
             } else {
                 break;
             }
@@ -105,7 +114,7 @@ impl Lexer {
     }
 
     pub fn next_token(&mut self) -> Option<Token> {
-        self.next_word();
+        self.skip_whitespace_and_comments();
         let ch = self.advance()?;
 
         if let Some(kind) = match ch {
@@ -161,7 +170,7 @@ mod tests {
     #[test]
     fn test_next_word() {
         let mut lexer = Lexer::new("   abc");
-        lexer.next_word();
+        lexer.skip_whitespace_and_comments();
         assert_eq!(lexer.peek(), Some('a'));
     }
 
@@ -251,6 +260,19 @@ mod tests {
                 TokenKind::Let,
                 TokenKind::Identifier("force".into()),
                 TokenKind::Print,
+            ],
+        );
+    }
+
+    #[test]
+    fn skips_comments() {
+        check_tokens(
+            r#"# full line comment
+            1 2 3 # This is a comment"#,
+            vec![
+                TokenKind::Number(1.0),
+                TokenKind::Number(2.0),
+                TokenKind::Number(3.0),
             ],
         );
     }

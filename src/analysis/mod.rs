@@ -65,7 +65,7 @@ mod tests {
         let mut ctx = Analyser::new();
         let res = ctx.analyse(&stmts);
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), "Variable 'b' used before declaration");
+        assert_eq!(res.unwrap_err(), "Undeclared variable 'b'");
     }
 
     #[test]
