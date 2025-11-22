@@ -32,7 +32,7 @@ impl Analyser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::Expr;
+    use crate::ast::{Expr, ExprKind};
 
     fn stmt_let(name: &str, value: Expr) -> Stmt {
         Stmt::Let {
@@ -46,8 +46,8 @@ mod tests {
     fn analyser_accepts_simple_declarations() {
         // let a = 1; let b = a;
         let stmts = vec![
-            stmt_let("a", Expr::Number(1.0)),
-            stmt_let("b", Expr::Identifier("a".into())),
+            stmt_let("a", Expr::new(ExprKind::Number(1.0), 0, 0)),
+            stmt_let("b", Expr::new(ExprKind::Identifier("a".into()), 0, 0)),
         ];
 
         let mut ctx = Analyser::new();
@@ -58,8 +58,8 @@ mod tests {
     fn analyser_rejects_use_before_declaration() {
         // let a = b; let b = 2;
         let stmts = vec![
-            stmt_let("a", Expr::Identifier("b".into())),
-            stmt_let("b", Expr::Number(2.0)),
+            stmt_let("a", Expr::new(ExprKind::Identifier("b".into()), 0, 0)),
+            stmt_let("b", Expr::new(ExprKind::Number(2.0), 0, 0)),
         ];
 
         let mut ctx = Analyser::new();
@@ -72,8 +72,8 @@ mod tests {
     fn analyser_rejects_redeclaration() {
         // let a = 1; let a = 2;
         let stmts = vec![
-            stmt_let("a", Expr::Number(1.0)),
-            stmt_let("a", Expr::Number(2.0)),
+            stmt_let("a", Expr::new(ExprKind::Number(1.0), 0, 0)),
+            stmt_let("a", Expr::new(ExprKind::Number(2.0), 0, 0)),
         ];
 
         let mut ctx = Analyser::new();

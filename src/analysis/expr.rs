@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOp, Expr, UnitExpr};
+use crate::ast::{BinaryOp, Expr, ExprKind, UnitExpr};
 use super::{units::Unit, Analyser};
 
 
@@ -10,10 +10,10 @@ impl Expr {
     }
 
     pub fn check_declared(&self, ctx: &mut Analyser) -> Result<(), String> {
-        match self {
-            Expr::Number(_) => Ok(()),
-            Expr::Identifier(name) => ctx.symbols.check_declared(name),
-            Expr::Binary { left, right, .. } => {
+        match &self.node {
+            ExprKind::Number(_) => Ok(()),
+            ExprKind::Identifier(name) => ctx.symbols.check_declared(name),
+            ExprKind::Binary { left, right, .. } => {
                 left.check_declared(ctx)?;
                 right.check_declared(ctx)
             }
@@ -32,15 +32,15 @@ impl Expr {
 
     pub fn get_unit(&self, ctx: &mut Analyser) -> Result<Unit, String> {
         let dimensionless = Unit::new([0; 7]);
-        match self {
-            Expr::Number(_) => Ok(Unit::new([0; 7])),
+        match &self.node {
+            ExprKind::Number(_) => Ok(Unit::new([0; 7])),
 
-            Expr::Identifier(name) => ctx
+            ExprKind::Identifier(name) => ctx
                 .symbols
                 .get_unit(name)
                 .ok_or_else(|| format!("Undeclared variable '{}'", name)),
 
-            Expr::Binary { left, op, right } => {
+            ExprKind::Binary { left, op, right } => {
                 let ldim = left.get_unit(ctx)?;
                 let rdim = right.get_unit(ctx)?;
 
@@ -60,8 +60,8 @@ impl Expr {
 
                     BinaryOp::Multiply => Ok(ldim.add(&rdim)),
                     BinaryOp::Divide => Ok(ldim.sub(&rdim)),
-                    BinaryOp::Power => match **right {
-                        Expr::Number(exp_val) => {
+                    BinaryOp::Power => match right.node {
+                        ExprKind::Number(exp_val) => {
                             if (exp_val.fract()).abs() > std::f64::EPSILON {
                                 return Err(format!(
                                     "Non-integer exponent {} not allowed for units",
@@ -110,7 +110,7 @@ impl UnitExpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{BinaryOp, Expr};
+    use crate::ast::{BinaryOp, Expr, ExprKind};
     use crate::analysis::{Analyser, units::Unit};
 
     fn setup_analyser() -> Analyser {
@@ -130,36 +130,36 @@ mod tests {
 
     #[test]
     fn number_is_dimensionless() {
-        let expr = Expr::Number(9.81);
+        let expr = Expr::new(ExprKind::Number(9.81), 0, 0);
         let mut ctx = setup_analyser();
         assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([0; 7]));
     }
 
     #[test]
     fn variable_dimension_matches_declaration() {
-        let expr = Expr::Identifier("mass".into());
+        let expr = Expr::new(ExprKind::Identifier("mass".into()), 0, 0);
         let mut ctx = setup_analyser();
         assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([1, 0, 0, 0, 0, 0, 0]));
     }
 
     #[test]
     fn addition_same_dimension_ok() {
-        let expr = Expr::Binary {
-            left: Box::new(Expr::Identifier("force".into())),
+        let expr = Expr::new(ExprKind::Binary {
+            left: Box::new(Expr::new(ExprKind::Identifier("force".into()), 0, 0)),
             op: BinaryOp::Add,
-            right: Box::new(Expr::Identifier("force".into())),
-        };
+            right: Box::new(Expr::new(ExprKind::Identifier("force".into()), 0, 0)),
+        }, 0, 0);
         let mut ctx = setup_analyser();
         assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([1, 1, -2, 0, 0, 0, 0]));
     }
 
     #[test]
     fn addition_mismatched_units_fails() {
-        let expr = Expr::Binary {
-            left: Box::new(Expr::Identifier("pressure".into())),
+        let expr = Expr::new(ExprKind::Binary {
+            left: Box::new(Expr::new(ExprKind::Identifier("pressure".into()), 0, 0)),
             op: BinaryOp::Add,
-            right: Box::new(Expr::Identifier("force".into())),
-        };
+            right: Box::new(Expr::new(ExprKind::Identifier("force".into()), 0, 0)),
+        }, 0, 0);
         let mut ctx = setup_analyser();
         let err = expr.get_unit(&mut ctx).unwrap_err();
         assert!(err.contains("Unit mismatch"));
@@ -167,46 +167,47 @@ mod tests {
 
     #[test]
     fn multiplication_combines_dimensions() {
-        let expr = Expr::Binary {
-            left: Box::new(Expr::Identifier("mass".into())),
+        let expr = Expr::new(ExprKind::Binary {
+            left: Box::new(Expr::new(ExprKind::Identifier("mass".into()), 0, 0)),
             op: BinaryOp::Multiply,
-            right: Box::new(Expr::Identifier("accel".into())),
-        };
+            right: Box::new(Expr::new(ExprKind::Identifier("accel".into()), 0, 0)),
+        }, 0, 0);
         let mut ctx = setup_analyser();
         assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([1, 1, -2, 0, 0, 0, 0]));
     }
 
     #[test]
     fn division_subtracts_dimensions() {
-        let expr = Expr::Binary {
-            left: Box::new(Expr::Identifier("force".into())),
+        let expr = Expr::new(ExprKind::Binary {
+            left: Box::new(Expr::new(ExprKind::Identifier("force".into()), 0, 0)),
             op: BinaryOp::Divide,
-            right: Box::new(Expr::Identifier("area".into())),
-        };
+            right: Box::new(Expr::new(ExprKind::Identifier("area".into()), 0, 0)),
+        }, 0, 0);
         let mut ctx = setup_analyser();
         assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([1, -1, -2, 0, 0, 0, 0]));
     }
 
     #[test]
     fn power_integer_exponent_valid() {
-        let expr = Expr::Binary {
-            left: Box::new(Expr::Identifier("area".into())),
+        let expr = Expr::new(ExprKind::Binary {
+            left: Box::new(Expr::new(ExprKind::Identifier("area".into()), 0, 0)),
             op: BinaryOp::Power,
-            right: Box::new(Expr::Number(2.0)),
-        };
+            right: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
+        }, 0, 0);
         let mut ctx = setup_analyser();
         assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([0, 4, 0, 0, 0, 0, 0]));
     }
 
     #[test]
     fn power_non_integer_exponent_fails() {
-        let expr = Expr::Binary {
-            left: Box::new(Expr::Identifier("area".into())),
+        let expr = Expr::new(ExprKind::Binary {
+            left: Box::new(Expr::new(ExprKind::Identifier("area".into()), 0, 0)),
             op: BinaryOp::Power,
-            right: Box::new(Expr::Number(0.5)),
-        };
+            right: Box::new(Expr::new(ExprKind::Number(0.5), 0, 0)),
+        }, 0, 0);
         let mut ctx = setup_analyser();
         let err = expr.get_unit(&mut ctx).unwrap_err();
         assert!(err.contains("Non-integer exponent"));
     }
 }
+

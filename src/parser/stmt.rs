@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expr, Stmt, UnitExpr},
+    ast::{Expr, ExprKind, Stmt, UnitExpr},
     token::{Token, TokenKind},
 };
 
@@ -83,10 +83,11 @@ impl Parser {
 
         if let Some(Token {
             kind: TokenKind::Identifier(name),
-            ..
+            line,
+            column,
         }) = self.peek()
         {
-            expr = Expr::Identifier(name.clone());
+            expr = Expr::new(ExprKind::Identifier(name.clone()), *line, *column);
             self.advance();
         } else {
             expr = self.parse_expr()?;
@@ -98,7 +99,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{BinaryOp, Expr, Stmt, UnitExpr, UnitOp};
+    use crate::ast::{BinaryOp, Expr, ExprKind, Stmt, UnitExpr, UnitOp};
     use crate::parser::Parser;
     use crate::token::{Token, TokenKind};
 
@@ -123,7 +124,7 @@ mod tests {
             Stmt::Let {
                 name: "x".into(),
                 unit: None,
-                value: Expr::Number(42.0),
+                value: Expr::new(ExprKind::Number(42.0), 0, 0),
             }
         );
     }
@@ -155,7 +156,7 @@ mod tests {
             Stmt::Let {
                 name: "v".into(),
                 unit: Some(expected_unit),
-                value: Expr::Number(10.0),
+                value: Expr::new(ExprKind::Number(10.0), 0, 0),
             }
         );
     }
@@ -170,7 +171,7 @@ mod tests {
         let mut parser = make_parser(tokens);
         let stmt = parser.parse_stmt().unwrap().unwrap();
 
-        assert_eq!(stmt, Stmt::Print(Expr::Identifier("x".into())));
+        assert_eq!(stmt, Stmt::Print(Expr::new(ExprKind::Identifier("x".into()), 0, 0)));
     }
 
     #[test]
@@ -185,11 +186,11 @@ mod tests {
         let mut parser = make_parser(tokens);
         let stmt = parser.parse_stmt().unwrap().unwrap();
 
-        let expected_expr = Expr::Binary {
-            left: Box::new(Expr::Number(3.14)),
+        let expected_expr = Expr::new(ExprKind::Binary {
+            left: Box::new(Expr::new(ExprKind::Number(3.14), 0, 0)),
             op: BinaryOp::Add,
-            right: Box::new(Expr::Number(2.0)),
-        };
+            right: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
+        }, 0, 0);
 
         assert_eq!(stmt, Stmt::Print(expected_expr));
     }

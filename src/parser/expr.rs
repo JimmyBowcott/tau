@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BinaryOp, Expr},
+    ast::{BinaryOp, Expr, ExprKind},
     token::{Token, TokenKind},
 };
 
@@ -15,11 +15,26 @@ impl Parser {
 
         loop {
             let op = match self.peek() {
-                Some(Token { kind: TokenKind::Plus, .. }) => (1, 2, BinaryOp::Add),
-                Some(Token { kind: TokenKind::Minus, .. }) => (1, 2, BinaryOp::Subtract),
-                Some(Token { kind: TokenKind::Star, .. }) => (3, 4, BinaryOp::Multiply),
-                Some(Token { kind: TokenKind::Slash, .. }) => (3, 4, BinaryOp::Divide),
-                Some(Token { kind: TokenKind::Caret, .. }) => (5, 4, BinaryOp::Power),
+                Some(Token {
+                    kind: TokenKind::Plus,
+                    ..
+                }) => (1, 2, BinaryOp::Add),
+                Some(Token {
+                    kind: TokenKind::Minus,
+                    ..
+                }) => (1, 2, BinaryOp::Subtract),
+                Some(Token {
+                    kind: TokenKind::Star,
+                    ..
+                }) => (3, 4, BinaryOp::Multiply),
+                Some(Token {
+                    kind: TokenKind::Slash,
+                    ..
+                }) => (3, 4, BinaryOp::Divide),
+                Some(Token {
+                    kind: TokenKind::Caret,
+                    ..
+                }) => (5, 4, BinaryOp::Power),
                 _ => break,
             };
 
@@ -28,31 +43,52 @@ impl Parser {
                 break;
             }
 
-            self.advance();
-            let rhs = self.parse_expr_bp(rbp)?;
-            lhs = Expr::Binary {
-                left: Box::new(lhs),
-                op: bop,
-                right: Box::new(rhs),
-            };
+            if let Some(tok) = self.advance().cloned() {
+                let rhs = self.parse_expr_bp(rbp)?;
+                lhs = Expr::new(
+                    ExprKind::Binary {
+                        left: Box::new(lhs),
+                        op: bop,
+                        right: Box::new(rhs),
+                    },
+                    tok.line,
+                    tok.column,
+                );
+            }
         }
 
         Ok(lhs)
     }
 
     fn parse_primary(&mut self) -> Result<Expr, String> {
-        match self.advance() {
-            Some(Token { kind: TokenKind::Identifier(id), .. }) => Ok(Expr::Identifier(id.clone())),
-            Some(Token { kind: TokenKind::Number(n), .. }) => Ok(Expr::Number(n.clone())),
-            Some(Token { kind: TokenKind::LParen, .. }) => {
+        let tok = self.peek().cloned().ok_or("Unexpected end of input")?;
+        self.advance();
+
+        match &tok.kind {
+            TokenKind::Identifier(id) => Ok(Expr::new(
+                ExprKind::Identifier(id.clone()),
+                tok.line,
+                tok.column,
+            )),
+
+            TokenKind::Number(n) => Ok(Expr::new(ExprKind::Number(*n), tok.line, tok.column)),
+
+            TokenKind::LParen => {
                 let expr = self.parse_expr()?;
-                if let Some(Token { kind: TokenKind::RParen, .. }) = self.advance() {
-                    Ok(expr)
-                } else {
-                    Err("Expected )".into())
+                match self.advance() {
+                    Some(Token {
+                        kind: TokenKind::RParen,
+                        ..
+                    }) => Ok(expr),
+                    Some(t) => Err(format!("{}:{}: Expected ')'", t.line, t.column)),
+                    None => Err(format!("{}:{}: Expected ')'", tok.line, tok.column)),
                 }
             }
-            _ => Err("Expected number or variable".into()),
+
+            _ => Err(format!(
+                "{}:{}: Expected number or identifier",
+                tok.line, tok.column
+            )),
         }
     }
 }
@@ -60,8 +96,8 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::{BinaryOp, ExprKind};
     use crate::token::Token;
-    use crate::ast::{Expr, BinaryOp};
 
     fn make_parser(tokens: Vec<Token>) -> Parser {
         Parser::new(tokens)
@@ -72,7 +108,7 @@ mod tests {
         let tokens = vec![Token::new(TokenKind::Number(42.0), 1, 1)];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr().unwrap();
-        assert_eq!(expr, Expr::Number(42.0));
+        assert_eq!(expr.node, ExprKind::Number(42.0));
     }
 
     #[test]
@@ -80,7 +116,7 @@ mod tests {
         let tokens = vec![Token::new(TokenKind::Identifier("x".into()), 1, 1)];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr().unwrap();
-        assert_eq!(expr, Expr::Identifier("x".into()));
+        assert_eq!(expr.node, ExprKind::Identifier("x".into()));
     }
 
     #[test]
@@ -94,11 +130,11 @@ mod tests {
         let expr = parser.parse_expr().unwrap();
 
         assert_eq!(
-            expr,
-            Expr::Binary {
-                left: Box::new(Expr::Number(2.0)),
+            expr.node,
+            ExprKind::Binary {
+                left: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
                 op: BinaryOp::Add,
-                right: Box::new(Expr::Number(3.0)),
+                right: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
             }
         );
     }
@@ -117,15 +153,15 @@ mod tests {
         let expr = parser.parse_expr().unwrap();
 
         assert_eq!(
-            expr,
-            Expr::Binary {
-                left: Box::new(Expr::Number(2.0)),
+            expr.node,
+            ExprKind::Binary {
+                left: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
                 op: BinaryOp::Add,
-                right: Box::new(Expr::Binary {
-                    left: Box::new(Expr::Number(3.0)),
+                right: Box::new(Expr::new(ExprKind::Binary {
+                    left: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
                     op: BinaryOp::Multiply,
-                    right: Box::new(Expr::Number(4.0)),
-                }),
+                    right: Box::new(Expr::new(ExprKind::Number(4.0), 0, 0)),
+                }, 0, 0)),
             }
         );
     }
@@ -146,15 +182,15 @@ mod tests {
         let expr = parser.parse_expr().unwrap();
 
         assert_eq!(
-            expr,
-            Expr::Binary {
-                left: Box::new(Expr::Binary {
-                    left: Box::new(Expr::Number(2.0)),
+            expr.node,
+            ExprKind::Binary {
+                left: Box::new(Expr::new(ExprKind::Binary {
+                    left: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
                     op: BinaryOp::Add,
-                    right: Box::new(Expr::Number(3.0)),
-                }),
+                    right: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
+                }, 0, 0)),
                 op: BinaryOp::Multiply,
-                right: Box::new(Expr::Number(4.0)),
+                right: Box::new(Expr::new(ExprKind::Number(4.0), 0 ,0)),
             }
         );
     }
@@ -173,15 +209,15 @@ mod tests {
         let expr = parser.parse_expr().unwrap();
 
         assert_eq!(
-            expr,
-            Expr::Binary {
-                left: Box::new(Expr::Number(2.0)),
+            expr.node,
+            ExprKind::Binary {
+                left: Box::new(Expr::new(ExprKind::Number(2.0),0 ,0 )),
                 op: BinaryOp::Power,
-                right: Box::new(Expr::Binary {
-                    left: Box::new(Expr::Number(3.0)),
+                right: Box::new(Expr::new(ExprKind::Binary {
+                    left: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
                     op: BinaryOp::Power,
-                    right: Box::new(Expr::Number(2.0)),
-                }),
+                    right: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
+                }, 0, 0)),
             }
         );
     }

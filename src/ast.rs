@@ -1,6 +1,25 @@
 use std::fmt;
 use crate::runtime::Env;
 
+#[derive(Debug, Clone, Eq)]
+pub struct Spanned<T> {
+    pub node: T,
+    pub line: usize,
+    pub column: usize,
+}
+
+impl<T> Spanned<T> {
+    pub fn new(node: T, line: usize, column: usize) -> Self {
+        Self { node, line, column }
+    }
+}
+
+impl<T: PartialEq> PartialEq for Spanned<T> {
+    fn eq(self: &Self, rhs: &Self) -> bool {
+        self.node == rhs.node
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOp {
     Add,
@@ -17,7 +36,7 @@ pub enum UnitOp {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Expr {
+pub enum ExprKind {
     Number(f64),
     Identifier(String),
     Binary {
@@ -26,6 +45,8 @@ pub enum Expr {
         right: Box<Expr>,
     },
 }
+
+pub type Expr = Spanned<ExprKind>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum UnitExpr {
@@ -61,9 +82,9 @@ impl fmt::Display for BinaryOp {
 
 impl Expr {
     fn eval(&self, env: &mut Env) -> Result<f64, String> {
-        match self {
-            Expr::Number(n) => Ok(*n),
-            Expr::Binary { left, op, right } => {
+        match &self.node {
+            ExprKind::Number(n) => Ok(*n),
+            ExprKind::Binary { left, op, right } => {
                 let l = left.eval(env)?;
                 let r = right.eval(env)?;
                 match op {
@@ -74,8 +95,8 @@ impl Expr {
                     BinaryOp::Power => Ok(l.powf(r)),
                 }
             }
-            Expr::Identifier(name) => {
-                if let Some(value) = env.get(name) {
+            ExprKind::Identifier(name) => {
+                if let Some(value) = env.get(&name) {
                     Ok(*value)
                 } else {
                     Err(format!("Unknown variable {}", name))
@@ -106,7 +127,7 @@ impl Stmt {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{BinaryOp, Expr, Stmt};
+    use crate::ast::{BinaryOp, Expr, ExprKind, Stmt};
     use crate::runtime::Env;
 
     fn env() -> Env {
@@ -116,29 +137,29 @@ mod tests {
     #[test]
     fn eval_number() {
         let mut env = env();
-        let expr = Expr::Number(42.0);
+        let expr = Expr::new(ExprKind::Number(42.0), 0, 0);
         assert_eq!(expr.eval(&mut env).unwrap(), 42.0);
     }
 
     #[test]
     fn eval_binary_add() {
         let mut env = env();
-        let expr = Expr::Binary {
-            left: Box::new(Expr::Number(2.0)),
+        let expr = Expr::new(ExprKind::Binary {
+            left: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
             op: BinaryOp::Add,
-            right: Box::new(Expr::Number(3.0)),
-        };
+            right: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
+        }, 0, 0);
         assert_eq!(expr.eval(&mut env).unwrap(), 5.0);
     }
 
     #[test]
     fn eval_binary_power() {
         let mut env = env();
-        let expr = Expr::Binary {
-            left: Box::new(Expr::Number(2.0)),
+        let expr = Expr::new(ExprKind::Binary {
+            left: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
             op: BinaryOp::Power,
-            right: Box::new(Expr::Number(3.0)),
-        };
+            right: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
+        }, 0, 0);
         assert_eq!(expr.eval(&mut env).unwrap(), 8.0);
     }
 
@@ -146,7 +167,7 @@ mod tests {
     fn eval_identifier() {
         let mut env = env();
         env.insert("x".to_string(), 7.0);
-        let expr = Expr::Identifier("x".into());
+        let expr = Expr::new(ExprKind::Identifier("x".into()), 0, 0);
         assert_eq!(expr.eval(&mut env).unwrap(), 7.0);
     }
 
@@ -155,7 +176,7 @@ mod tests {
         let mut env = env();
         let stmt = Stmt::Let {
             name: "x".into(),
-            value: Expr::Number(10.0),
+            value: Expr::new(ExprKind::Number(10.0), 0, 0),
             unit: None,
         };
         stmt.exec(&mut env).unwrap();
