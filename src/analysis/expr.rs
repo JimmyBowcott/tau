@@ -24,7 +24,7 @@ impl Expr {
         let found_unit = self.get_unit(ctx)?;
 
         if !self.assert_equal(unit, &found_unit) {
-            return Err(format!("Expected {}, found {}", unit, found_unit))
+            return Err(format!("{}:{}: Expected {}, found {}", self.line, self.column, unit, found_unit))
         }
 
         Ok(())
@@ -38,7 +38,7 @@ impl Expr {
             ExprKind::Identifier(name) => ctx
                 .symbols
                 .get_unit(name)
-                .ok_or_else(|| format!("Undeclared variable '{}'", name)),
+                .ok_or_else(|| format!("{}:{}: Undeclared variable '{}'", self.line, self.column, name)),
 
             ExprKind::Binary { left, op, right } => {
                 let ldim = left.get_unit(ctx)?;
@@ -50,7 +50,9 @@ impl Expr {
                             Ok(ldim)
                         } else {
                             Err(format!(
-                                "Unit mismatch: cannot {} {} and {}",
+                                "{}:{}: Unit mismatch: cannot {} {} and {}",
+                                self.line,
+                                self.column,
                                 op.to_string(),
                                 ldim,
                                 rdim,
@@ -64,14 +66,16 @@ impl Expr {
                         ExprKind::Number(exp_val) => {
                             if (exp_val.fract()).abs() > std::f64::EPSILON {
                                 return Err(format!(
-                                    "Non-integer exponent {} not allowed for units",
+                                    "{}:{}: Non-integer exponent {} not allowed for units",
+                                    self.line,
+                                    self.column,
                                     exp_val
                                 ));
                             }
                             let n = exp_val as i32;
                             Ok(ldim.mul(n as f64))
                         }
-                        _ => Err("Exponent must be a dimensionless numeric literal".into()),
+                        _ => Err(format!("{}:{}: Exponent must be a dimensionless numeric literal", self.line, self.column)),
                     },
                 }
             }

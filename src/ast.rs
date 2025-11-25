@@ -99,7 +99,7 @@ impl Expr {
                 if let Some(value) = env.get(&name) {
                     Ok(*value)
                 } else {
-                    Err(format!("Unknown variable {}", name))
+                    Err(format!("{}:{}: Unknown variable {}", self.line, self.column, name))
                 }
             }
         }
