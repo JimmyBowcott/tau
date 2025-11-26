@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn parse_single_unit() {
-        let tokens = vec![Token::new(TokenKind::Identifier("m".into()), 1, 1)];
+        let tokens = vec![Token::new(TokenKind::Identifier("m".into()), 1, 1, 1)];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_unit_expr().unwrap();
         assert_eq!(expr, UnitExpr::Symbol("m".into()));
@@ -102,9 +102,9 @@ mod tests {
     #[test]
     fn parse_unit_with_exponent() {
         let tokens = vec![
-            Token::new(TokenKind::Identifier("s".into()), 1, 1),
-            Token::new(TokenKind::Caret, 1, 2),
-            Token::new(TokenKind::Number(2.0), 1, 3),
+            Token::new(TokenKind::Identifier("s".into()), 1, 1, 1),
+            Token::new(TokenKind::Caret, 1, 2, 1),
+            Token::new(TokenKind::Number(2.0), 1, 3, 1),
         ];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_unit_expr().unwrap();
@@ -120,11 +120,11 @@ mod tests {
     #[test]
     fn parse_complex_unit() {
         let tokens = vec![
-            Token::new(TokenKind::Identifier("N".into()), 1, 1),
-            Token::new(TokenKind::Slash, 1, 2),
-            Token::new(TokenKind::Identifier("m".into()), 1, 3),
-            Token::new(TokenKind::Caret, 1, 4),
-            Token::new(TokenKind::Number(2.0), 1, 5),
+            Token::new(TokenKind::Identifier("N".into()), 1, 1, 1),
+            Token::new(TokenKind::Slash, 1, 2, 1),
+            Token::new(TokenKind::Identifier("m".into()), 1, 3, 1),
+            Token::new(TokenKind::Caret, 1, 4, 1),
+            Token::new(TokenKind::Number(2.0), 1, 5, 1),
         ];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_unit_expr().unwrap();
@@ -151,8 +151,8 @@ mod tests {
     #[test]
     fn parse_unit_missing_exponent_should_err() {
         let tokens = vec![
-            Token::new(TokenKind::Identifier("s".into()), 1, 1),
-            Token::new(TokenKind::Caret, 1, 2),
+            Token::new(TokenKind::Identifier("s".into()), 1, 1, 1),
+            Token::new(TokenKind::Caret, 1, 2, 1),
         ];
         let mut parser = make_parser(tokens);
         let err = parser.parse_unit_expr().unwrap_err();

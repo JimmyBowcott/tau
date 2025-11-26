@@ -137,9 +137,10 @@ impl Lexer {
 
     pub fn next_token(&mut self) -> Option<Token> {
         self.skip_whitespace_and_comments();
-        let ch = self.advance()?;
+        let (start_line, start_col) = (self.line, self.column);
 
-        if let Some(kind) = match ch {
+        let ch = self.advance()?;
+        let kind = match ch {
             ':' => Some(TokenKind::Colon),
             '=' => Some(TokenKind::Equal),
             ';' => Some(TokenKind::Semicolon),
@@ -166,8 +167,11 @@ impl Lexer {
                 self.match_identifier(identifier)
             }
             _ => None,
-        } {
-            Some(Token::new(kind, self.line, self.column))
+        };
+
+        if let Some(kind) = kind {
+            let length = self.column - start_col;
+            Some(Token::new(kind, start_line, start_col, length))
         } else {
             None
         }
@@ -363,5 +367,41 @@ mod tests {
                 TokenKind::Semicolon,
             ],
         );
+    }
+
+    #[test]
+    fn test_line() {
+        let input = "let a = 2;\nlet b = a;";
+        let expected = [1, 1, 1, 1, 1, 2, 2, 2, 2, 2];
+        let mut lexer = Lexer::new(input);
+
+        for line in expected {
+            let recieved = lexer.next_token().expect("Expected a token");
+            assert_eq!(recieved.line, line);
+        }
+    }
+
+    #[test]
+    fn test_column() {
+        let input = "let a = 2;\nlet vel = 3;";
+        let expected = [0, 4, 6, 8, 9, 0, 4, 8, 10, 11];
+        let mut lexer = Lexer::new(input);
+
+        for col in expected {
+            let recieved = lexer.next_token().expect("Expected a token");
+            assert_eq!(recieved.column, col);
+        }
+    }
+
+    #[test]
+    fn test_length() {
+        let input = "let a = 2;\nprint(a);";
+        let expected = [3, 1, 1, 1, 1, 5, 1, 1, 1, 1];
+        let mut lexer = Lexer::new(input);
+
+        for length in expected {
+            let recieved = lexer.next_token().expect("Expected a token");
+            assert_eq!(recieved.length, length);
+        }
     }
 }

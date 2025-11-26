@@ -85,6 +85,7 @@ impl Parser {
             kind: TokenKind::Identifier(name),
             line,
             column,
+            ..
         }) = self.peek()
         {
             expr = Expr::new(ExprKind::Identifier(name.clone()), *line, *column);
@@ -110,10 +111,10 @@ mod tests {
     #[test]
     fn parse_simple_let() {
         let tokens = vec![
-            Token::new(TokenKind::Let, 1, 1),
-            Token::new(TokenKind::Identifier("x".into()), 1, 5),
-            Token::new(TokenKind::Equal, 1, 7),
-            Token::new(TokenKind::Number(42.0), 1, 9),
+            Token::new(TokenKind::Let, 1, 1, 3),
+            Token::new(TokenKind::Identifier("x".into()), 1, 5, 1),
+            Token::new(TokenKind::Equal, 1, 7, 1),
+            Token::new(TokenKind::Number(42.0), 1, 9, 2),
         ];
 
         let mut parser = make_parser(tokens);
@@ -132,14 +133,14 @@ mod tests {
     #[test]
     fn parse_let_with_unit() {
         let tokens = vec![
-            Token::new(TokenKind::Let, 1, 1),
-            Token::new(TokenKind::Identifier("v".into()), 1, 5),
-            Token::new(TokenKind::Colon, 1, 6),
-            Token::new(TokenKind::Identifier("m".into()), 1, 7),
-            Token::new(TokenKind::Slash, 1, 8),
-            Token::new(TokenKind::Identifier("s".into()), 1, 9),
-            Token::new(TokenKind::Equal, 1, 11),
-            Token::new(TokenKind::Number(10.0), 1, 13),
+            Token::new(TokenKind::Let, 1, 1, 3),
+            Token::new(TokenKind::Identifier("v".into()), 1, 5, 1),
+            Token::new(TokenKind::Colon, 1, 6, 1),
+            Token::new(TokenKind::Identifier("m".into()), 1, 7, 1),
+            Token::new(TokenKind::Slash, 1, 8, 1),
+            Token::new(TokenKind::Identifier("s".into()), 1, 9, 1),
+            Token::new(TokenKind::Equal, 1, 11, 1),
+            Token::new(TokenKind::Number(10.0), 1, 13, 2),
         ];
 
         let mut parser = make_parser(tokens);
@@ -164,8 +165,8 @@ mod tests {
     #[test]
     fn parse_print_identifier() {
         let tokens = vec![
-            Token::new(TokenKind::Print, 1, 1),
-            Token::new(TokenKind::Identifier("x".into()), 1, 7),
+            Token::new(TokenKind::Print, 1, 1, 5),
+            Token::new(TokenKind::Identifier("x".into()), 1, 7, 1),
         ];
 
         let mut parser = make_parser(tokens);
@@ -177,10 +178,10 @@ mod tests {
     #[test]
     fn parse_print_expr() {
         let tokens = vec![
-            Token::new(TokenKind::Print, 1, 1),
-            Token::new(TokenKind::Number(3.14), 1, 7),
-            Token::new(TokenKind::Plus, 1, 11),
-            Token::new(TokenKind::Number(2.0), 1, 13),
+            Token::new(TokenKind::Print, 1, 1, 5),
+            Token::new(TokenKind::Number(3.14), 1, 7, 4),
+            Token::new(TokenKind::Plus, 1, 11, 1),
+            Token::new(TokenKind::Number(2.0), 1, 13, 1),
         ];
 
         let mut parser = make_parser(tokens);
@@ -198,9 +199,9 @@ mod tests {
     #[test]
     fn parse_let_missing_identifier_returns_err() {
         let tokens = vec![
-            Token::new(TokenKind::Let, 1, 1),
-            Token::new(TokenKind::Equal, 1, 5),
-            Token::new(TokenKind::Number(5.0), 1, 7),
+            Token::new(TokenKind::Let, 1, 1, 3),
+            Token::new(TokenKind::Equal, 1, 5, 1),
+            Token::new(TokenKind::Number(5.0), 1, 7, 1),
         ];
         let mut parser = make_parser(tokens);
         let err = parser.parse_stmt().unwrap_err();
@@ -210,8 +211,8 @@ mod tests {
     #[test]
     fn parse_let_missing_equal_returns_err() {
         let tokens = vec![
-            Token::new(TokenKind::Let, 1, 1),
-            Token::new(TokenKind::Identifier("x".into()), 1, 5),
+            Token::new(TokenKind::Let, 1, 1, 3),
+            Token::new(TokenKind::Identifier("x".into()), 1, 5, 1),
         ];
         let mut parser = make_parser(tokens);
         let err = parser.parse_stmt().unwrap_err();
@@ -222,11 +223,11 @@ mod tests {
     #[test]
     fn parse_let_missing_unit_returns_err() {
         let tokens = vec![
-            Token::new(TokenKind::Let, 1, 1),
-            Token::new(TokenKind::Identifier("v".into()), 1, 5),
-            Token::new(TokenKind::Colon, 1, 6),
-            Token::new(TokenKind::Equal, 1, 8),
-            Token::new(TokenKind::Number(10.0), 1, 10),
+            Token::new(TokenKind::Let, 1, 1, 3),
+            Token::new(TokenKind::Identifier("v".into()), 1, 5, 1),
+            Token::new(TokenKind::Colon, 1, 6, 1),
+            Token::new(TokenKind::Equal, 1, 8, 1),
+            Token::new(TokenKind::Number(10.0), 1, 10, 2),
         ];
         let mut parser = make_parser(tokens);
         let err = parser.parse_stmt().unwrap_err();

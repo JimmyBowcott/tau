@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn parse_number() {
-        let tokens = vec![Token::new(TokenKind::Number(42.0), 1, 1)];
+        let tokens = vec![Token::new(TokenKind::Number(42.0), 1, 1, 2)];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr().unwrap();
         assert_eq!(expr.node, ExprKind::Number(42.0));
@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn parse_identifier() {
-        let tokens = vec![Token::new(TokenKind::Identifier("x".into()), 1, 1)];
+        let tokens = vec![Token::new(TokenKind::Identifier("x".into()), 1, 1, 1)];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr().unwrap();
         assert_eq!(expr.node, ExprKind::Identifier("x".into()));
@@ -122,9 +122,9 @@ mod tests {
     #[test]
     fn parse_simple_addition() {
         let tokens = vec![
-            Token::new(TokenKind::Number(2.0), 1, 1),
-            Token::new(TokenKind::Plus, 1, 2),
-            Token::new(TokenKind::Number(3.0), 1, 3),
+            Token::new(TokenKind::Number(2.0), 1, 1, 1),
+            Token::new(TokenKind::Plus, 1, 2, 1),
+            Token::new(TokenKind::Number(3.0), 1, 3, 1),
         ];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr().unwrap();
@@ -143,11 +143,11 @@ mod tests {
     fn parse_precedence() {
         // 2 + 3 * 4 => 2 + (3*4)
         let tokens = vec![
-            Token::new(TokenKind::Number(2.0), 1, 1),
-            Token::new(TokenKind::Plus, 1, 2),
-            Token::new(TokenKind::Number(3.0), 1, 3),
-            Token::new(TokenKind::Star, 1, 4),
-            Token::new(TokenKind::Number(4.0), 1, 5),
+            Token::new(TokenKind::Number(2.0), 1, 1, 1),
+            Token::new(TokenKind::Plus, 1, 2, 1),
+            Token::new(TokenKind::Number(3.0), 1, 3, 1),
+            Token::new(TokenKind::Star, 1, 4, 1),
+            Token::new(TokenKind::Number(4.0), 1, 5, 1),
         ];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr().unwrap();
@@ -170,13 +170,13 @@ mod tests {
     fn parse_parentheses() {
         // (2 + 3) * 4
         let tokens = vec![
-            Token::new(TokenKind::LParen, 1, 1),
-            Token::new(TokenKind::Number(2.0), 1, 2),
-            Token::new(TokenKind::Plus, 1, 3),
-            Token::new(TokenKind::Number(3.0), 1, 4),
-            Token::new(TokenKind::RParen, 1, 5),
-            Token::new(TokenKind::Star, 1, 6),
-            Token::new(TokenKind::Number(4.0), 1, 7),
+            Token::new(TokenKind::LParen, 1, 1, 1),
+            Token::new(TokenKind::Number(2.0), 1, 2, 1),
+            Token::new(TokenKind::Plus, 1, 3, 1),
+            Token::new(TokenKind::Number(3.0), 1, 4, 1),
+            Token::new(TokenKind::RParen, 1, 5, 1),
+            Token::new(TokenKind::Star, 1, 6, 1),
+            Token::new(TokenKind::Number(4.0), 1, 7, 1),
         ];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr().unwrap();
@@ -199,11 +199,11 @@ mod tests {
     fn parse_power_associativity() {
         // 2 ^ 3 ^ 2 = 2 ^ (3 ^ 2)
         let tokens = vec![
-            Token::new(TokenKind::Number(2.0), 1, 1),
-            Token::new(TokenKind::Caret, 1, 2),
-            Token::new(TokenKind::Number(3.0), 1, 3),
-            Token::new(TokenKind::Caret, 1, 4),
-            Token::new(TokenKind::Number(2.0), 1, 5),
+            Token::new(TokenKind::Number(2.0), 1, 1, 1),
+            Token::new(TokenKind::Caret, 1, 2, 1),
+            Token::new(TokenKind::Number(3.0), 1, 3, 1),
+            Token::new(TokenKind::Caret, 1, 4, 1),
+            Token::new(TokenKind::Number(2.0), 1, 5, 1),
         ];
         let mut parser = make_parser(tokens);
         let expr = parser.parse_expr().unwrap();

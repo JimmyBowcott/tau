@@ -32,6 +32,7 @@ pub struct Token {
     pub kind: TokenKind,
     pub line: usize,
     pub column: usize,
+    pub length: usize,
 }
 
 impl PartialEq for Token {
@@ -41,11 +42,12 @@ impl PartialEq for Token {
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, line: usize, column: usize) -> Self {
+    pub fn new(kind: TokenKind, line: usize, column: usize, length: usize) -> Self {
         Self {
             kind,
             line,
             column,
+            length,
         }
     }
 }
