@@ -72,7 +72,7 @@ impl Parser {
         }
 
         self.expect_token(TokenKind::Equal, "Expected '='")?;
-        let value = self.parse_expr()?;
+        let value = self.parse_expr().map_err(|e| e.to_string())?;
 
         Ok(Stmt::Let { name, unit, value })
     }
@@ -91,7 +91,7 @@ impl Parser {
             expr = Expr::new(ExprKind::Identifier(name.clone()), *line, *column);
             self.advance();
         } else {
-            expr = self.parse_expr()?;
+            expr = self.parse_expr().map_err(|e| e.to_string())?;
         }
 
         Ok(Stmt::Print(expr))

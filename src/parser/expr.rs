@@ -1,16 +1,15 @@
 use crate::{
-    ast::{BinaryOp, Expr, ExprKind},
-    token::{Token, TokenKind},
+    ast::{BinaryOp, Expr, ExprKind}, error::Error, token::{Token, TokenKind}
 };
 
 use super::Parser;
 
 impl Parser {
-    pub fn parse_expr(&mut self) -> Result<Expr, String> {
+    pub fn parse_expr(&mut self) -> Result<Expr, Error> {
         self.parse_expr_bp(0)
     }
 
-    fn parse_expr_bp(&mut self, min_bp: u8) -> Result<Expr, String> {
+    fn parse_expr_bp(&mut self, min_bp: u8) -> Result<Expr, Error> {
         let mut lhs = self.parse_primary()?;
 
         loop {
@@ -60,8 +59,14 @@ impl Parser {
         Ok(lhs)
     }
 
-    fn parse_primary(&mut self) -> Result<Expr, String> {
-        let tok = self.peek().cloned().ok_or("Unexpected end of input")?;
+    fn parse_primary(&mut self) -> Result<Expr, Error> {
+        // TODO: Fix this return
+        let tok = self.peek().cloned().ok_or(Error {
+            message: "Unexpected end of input".into(),
+            line: self.pos,
+            column: 1,
+            span: 1,
+        })?;
         self.advance();
 
         match &tok.kind {
@@ -80,15 +85,27 @@ impl Parser {
                         kind: TokenKind::RParen,
                         ..
                     }) => Ok(expr),
-                    Some(t) => Err(format!("{}:{}: Expected ')'", t.line, t.column)),
-                    None => Err(format!("{}:{}: Expected ')'", tok.line, tok.column)),
+                    Some(t) => Err(Error {
+                        message: "Expected ')'".into(),
+                        line: t.line,
+                        column: t.column,
+                        span: 1,
+                    }),
+                    None => Err(Error {
+                        message: "Expected ')'".into(),
+                        line: tok.line,
+                        column: tok.column,
+                        span: 1,
+                    }),
                 }
             }
 
-            _ => Err(format!(
-                "{}:{}: Expected number or identifier",
-                tok.line, tok.column
-            )),
+            _ => Err(Error {
+                message: "Expected number or identifier".into(),
+                line: tok.line,
+                column: tok.column,
+                span: 1,
+            }),
         }
     }
 }

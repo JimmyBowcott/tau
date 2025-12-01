@@ -1,5 +1,5 @@
 use std::fmt;
-use crate::runtime::Env;
+use crate::{error::Error, runtime::Env};
 
 #[derive(Debug, Clone, Eq)]
 pub struct Spanned<T> {
@@ -81,7 +81,7 @@ impl fmt::Display for BinaryOp {
 }
 
 impl Expr {
-    fn eval(&self, env: &mut Env) -> Result<f64, String> {
+    fn eval(&self, env: &mut Env) -> Result<f64, Error> {
         match &self.node {
             ExprKind::Number(n) => Ok(*n),
             ExprKind::Binary { left, op, right } => {
@@ -99,7 +99,7 @@ impl Expr {
                 if let Some(value) = env.get(&name) {
                     Ok(*value)
                 } else {
-                    Err(format!("{}:{}: Unknown variable {}", self.line, self.column, name))
+                    Err(self.error(format!("Unknown variable {}", name)))
                 }
             }
         }
@@ -107,7 +107,7 @@ impl Expr {
 }
 
 impl Stmt {
-    pub fn exec(&self, env: &mut Env) -> Result<(), String> {
+    pub fn exec(&self, env: &mut Env) -> Result<(), Error> {
         match self {
             Stmt::Expr(expr) => {
                 expr.eval(env)?;
