@@ -21,7 +21,7 @@ impl Parser {
                 kind: TokenKind::Print,
                 ..
             } => self.parse_print_stmt().map(Some),
-            _ => Err(format!("Line {}:{}: unexpected token '{:?}'", token.line, token.column, token.kind)),
+            _ => Err(format!("Line {}:{}: unexpected token '{}'", token.line, token.column, token.kind)),
         }
     }
 

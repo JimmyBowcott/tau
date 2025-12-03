@@ -1,3 +1,6 @@
+use core::fmt;
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
     Let,
@@ -33,6 +36,13 @@ pub struct Token {
     pub line: usize,
     pub column: usize,
     pub length: usize,
+}
+
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = format!("{:?}", self).to_lowercase();
+        write!(f, "{}", s)
+    }
 }
 
 impl PartialEq for Token {

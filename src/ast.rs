@@ -75,7 +75,14 @@ pub enum Stmt {
 
 impl fmt::Display for BinaryOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = format!("{:?}", self).to_lowercase();
+        let s = match self {
+            BinaryOp::Add => "add",
+            BinaryOp::Subtract => "subtract",
+            BinaryOp::Multiply => "multiply",
+            BinaryOp::Divide => "divide",
+            BinaryOp::Power => "power",
+        };
+        // let s = format!("{:?}", self).to_lowercase();
         write!(f, "{}", s)
     }
 }
