@@ -1,5 +1,7 @@
 use crate::{
-    ast::{BinaryOp, Expr, ExprKind}, error::Error, token::{Token, TokenKind}
+    ast::{BinaryOp, Expr, ExprKind},
+    error::Error,
+    token::{Token, TokenKind},
 };
 
 use super::Parser;
@@ -61,12 +63,11 @@ impl Parser {
 
     fn parse_primary(&mut self) -> Result<Expr, Error> {
         // TODO: Fix this return
-        let tok = self.peek().cloned().ok_or(Error {
-            message: "Unexpected end of input".into(),
-            line: self.pos,
-            column: 1,
-            span: 1,
-        })?;
+        let tok = self.peek().cloned().ok_or(Error::new(
+            self.pos,
+            1,
+            "Unexpected end of input".into(),
+        ))?;
         self.advance();
 
         match &tok.kind {
@@ -85,27 +86,16 @@ impl Parser {
                         kind: TokenKind::RParen,
                         ..
                     }) => Ok(expr),
-                    Some(t) => Err(Error {
-                        message: "Expected ')'".into(),
-                        line: t.line,
-                        column: t.column,
-                        span: 1,
-                    }),
-                    None => Err(Error {
-                        message: "Expected ')'".into(),
-                        line: tok.line,
-                        column: tok.column,
-                        span: 1,
-                    }),
+                    Some(t) => Err(Error::new(t.line, t.column, "Expected ')'".into())),
+                    None => Err(Error::new(tok.line, tok.column, "Expected ')'".into())),
                 }
             }
 
-            _ => Err(Error {
-                message: "Expected number or identifier".into(),
-                line: tok.line,
-                column: tok.column,
-                span: 1,
-            }),
+            _ => Err(Error::new(
+                tok.line,
+                tok.column,
+                "Expected number or identifier".into(),
+            )),
         }
     }
 }
@@ -174,11 +164,15 @@ mod tests {
             ExprKind::Binary {
                 left: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
                 op: BinaryOp::Add,
-                right: Box::new(Expr::new(ExprKind::Binary {
-                    left: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
-                    op: BinaryOp::Multiply,
-                    right: Box::new(Expr::new(ExprKind::Number(4.0), 0, 0)),
-                }, 0, 0)),
+                right: Box::new(Expr::new(
+                    ExprKind::Binary {
+                        left: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
+                        op: BinaryOp::Multiply,
+                        right: Box::new(Expr::new(ExprKind::Number(4.0), 0, 0)),
+                    },
+                    0,
+                    0
+                )),
             }
         );
     }
@@ -201,13 +195,17 @@ mod tests {
         assert_eq!(
             expr.node,
             ExprKind::Binary {
-                left: Box::new(Expr::new(ExprKind::Binary {
-                    left: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
-                    op: BinaryOp::Add,
-                    right: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
-                }, 0, 0)),
+                left: Box::new(Expr::new(
+                    ExprKind::Binary {
+                        left: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
+                        op: BinaryOp::Add,
+                        right: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
+                    },
+                    0,
+                    0
+                )),
                 op: BinaryOp::Multiply,
-                right: Box::new(Expr::new(ExprKind::Number(4.0), 0 ,0)),
+                right: Box::new(Expr::new(ExprKind::Number(4.0), 0, 0)),
             }
         );
     }
@@ -228,13 +226,17 @@ mod tests {
         assert_eq!(
             expr.node,
             ExprKind::Binary {
-                left: Box::new(Expr::new(ExprKind::Number(2.0),0 ,0 )),
+                left: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
                 op: BinaryOp::Power,
-                right: Box::new(Expr::new(ExprKind::Binary {
-                    left: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
-                    op: BinaryOp::Power,
-                    right: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
-                }, 0, 0)),
+                right: Box::new(Expr::new(
+                    ExprKind::Binary {
+                        left: Box::new(Expr::new(ExprKind::Number(3.0), 0, 0)),
+                        op: BinaryOp::Power,
+                        right: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
+                    },
+                    0,
+                    0
+                )),
             }
         );
     }
