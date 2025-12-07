@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt};
 
 use super::{Analyser, dimension::Dimension};
-use crate::ast::{UnitExpr, UnitOp};
+use crate::ast::{UnitExpr, UnitExprKind, UnitOp};
 
 #[derive(Clone, Debug)]
 pub struct Unit {
@@ -226,15 +226,15 @@ const PREFIXES: &[(&'static str, f64)] = &[
 
 impl Analyser {
     pub fn get_unit(&self, expr: &UnitExpr) -> Result<Unit, String> {
-        match expr {
-            UnitExpr::Symbol(name) => {
+        match &expr.node {
+            UnitExprKind::Symbol(name) => {
                 let unit = self.units.get_unit(name);
                 match unit {
                     Some(u) => Ok(u),
                     None => Err(format!("Unknown unit {}", name)),
                 }
             }
-            UnitExpr::Binary { left, op, right } => {
+            UnitExprKind::Binary { left, op, right } => {
                 let l = self.get_unit(left)?;
                 let r = self.get_unit(right)?;
                 Ok(match op {
@@ -242,7 +242,7 @@ impl Analyser {
                     UnitOp::Divide => l.sub(&r),
                 })
             }
-            UnitExpr::Power { base, exponent } => {
+            UnitExprKind::Power { base, exponent } => {
                 let b = self.get_unit(base)?;
                 Ok(b.mul(*exponent))
             }
@@ -442,7 +442,7 @@ mod tests {
     #[test]
     fn test_symbol() {
         let ctx = Analyser::new();
-        let expr = UnitExpr::Symbol("m".to_string());
+        let expr = UnitExpr::new(UnitExprKind::Symbol("m".to_string()), 1, 1);
         let unit = ctx.get_unit(&expr).unwrap();
         assert_eq!(unit, Unit::new([0, 1, 0, 0, 0, 0, 0]));
     }
@@ -450,11 +450,11 @@ mod tests {
     #[test]
     fn test_multiply() {
         let ctx = Analyser::new();
-        let expr = UnitExpr::Binary {
-            left: Box::new(UnitExpr::Symbol("A".to_string())),
+        let expr = UnitExpr::new(UnitExprKind::Binary {
+            left: Box::new(UnitExpr::new(UnitExprKind::Symbol("A".to_string()), 1, 1)),
             op: UnitOp::Multiply,
-            right: Box::new(UnitExpr::Symbol("s".to_string())),
-        };
+            right: Box::new(UnitExpr::new(UnitExprKind::Symbol("s".to_string()), 1, 1)),
+        }, 1, 1);
         let unit = ctx.get_unit(&expr).unwrap();
         assert_eq!(unit, Unit::new([0, 0, 1, 1, 0, 0, 0]));
     }
@@ -462,11 +462,11 @@ mod tests {
     #[test]
     fn test_divide() {
         let ctx = Analyser::new();
-        let expr = UnitExpr::Binary {
-            left: Box::new(UnitExpr::Symbol("m".to_string())),
+        let expr = UnitExpr::new(UnitExprKind::Binary {
+            left: Box::new(UnitExpr::new(UnitExprKind::Symbol("m".to_string()), 1, 1)),
             op: UnitOp::Divide,
-            right: Box::new(UnitExpr::Symbol("s".to_string())),
-        };
+            right: Box::new(UnitExpr::new(UnitExprKind::Symbol("s".to_string()), 1, 1)),
+        }, 1, 1);
         let unit = ctx.get_unit(&expr).unwrap();
         assert_eq!(unit, Unit::new([0, 1, -1, 0, 0, 0, 0]));
     }
@@ -474,10 +474,10 @@ mod tests {
     #[test]
     fn test_power() {
         let ctx = Analyser::new();
-        let expr = UnitExpr::Power {
-            base: Box::new(UnitExpr::Symbol("cd".to_string())),
+        let expr = UnitExpr::new(UnitExprKind::Power {
+            base: Box::new(UnitExpr::new(UnitExprKind::Symbol("cd".to_string()), 1, 1)),
             exponent: 2.0,
-        };
+        }, 1, 1);
         let unit = ctx.get_unit(&expr).unwrap();
         assert_eq!(unit, Unit::new([0, 0, 0, 0, 0, 0, 2]));
     }
@@ -485,7 +485,7 @@ mod tests {
     #[test]
     fn test_derived_symbol() {
         let ctx = Analyser::new();
-        let expr = UnitExpr::Symbol("N".to_string());
+        let expr = UnitExpr::new(UnitExprKind::Symbol("N".to_string()), 1, 1);
         let unit = ctx.get_unit(&expr).unwrap();
         assert_eq!(unit, Unit::new([1, 1, -2, 0, 0, 0, 0]));
     }
@@ -494,17 +494,17 @@ mod tests {
     fn test_complex_expr() {
         let ctx = Analyser::new();
         // m^2 / s^2
-        let expr = UnitExpr::Binary {
-            left: Box::new(UnitExpr::Power {
-                base: Box::new(UnitExpr::Symbol("N".to_string())),
+        let expr = UnitExpr::new(UnitExprKind::Binary {
+            left: Box::new(UnitExpr::new(UnitExprKind::Power {
+                base: Box::new(UnitExpr::new(UnitExprKind::Symbol("N".to_string()), 1, 1)),
                 exponent: 2.0,
-            }),
+            }, 1, 1)),
             op: UnitOp::Multiply,
-            right: Box::new(UnitExpr::Power {
-                base: Box::new(UnitExpr::Symbol("m".to_string())),
+            right: Box::new(UnitExpr::new(UnitExprKind::Power {
+                base: Box::new(UnitExpr::new(UnitExprKind::Symbol("m".to_string()), 1, 1)),
                 exponent: 2.0,
-            }),
-        };
+            }, 1, 1)),
+        }, 1, 1, );
         let unit = ctx.get_unit(&expr).unwrap();
         assert_eq!(unit, Unit::new([2, 4, -4, 0, 0, 0, 0]));
     }
@@ -512,7 +512,7 @@ mod tests {
     #[test]
     fn test_unknown_unit() {
         let ctx = Analyser::new();
-        let expr = UnitExpr::Symbol("foo".to_string());
+        let expr = UnitExpr::new(UnitExprKind::Symbol("foo".to_string()), 1, 1);
         let res = ctx.get_unit(&expr);
         assert!(res.is_err());
     }

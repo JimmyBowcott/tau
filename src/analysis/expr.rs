@@ -1,6 +1,6 @@
 use super::{Analyser, units::Unit};
 use crate::{
-    ast::{BinaryOp, Expr, ExprKind, UnitExpr},
+    ast::{BinaryOp, Expr, ExprKind, UnitExpr, UnitExprKind},
     error::Error,
 };
 
@@ -98,10 +98,10 @@ impl Expr {
 
 impl UnitExpr {
     pub fn validate(&self, ctx: &mut Analyser) -> Result<(), String> {
-        match self {
-            UnitExpr::Symbol(s) => ctx.units.validate(s),
-            UnitExpr::Power { base, .. } => base.validate(ctx),
-            UnitExpr::Binary { left, right, .. } => {
+        match &self.node {
+            UnitExprKind::Symbol(s) => ctx.units.validate(s),
+            UnitExprKind::Power { base, .. } => base.validate(ctx),
+            UnitExprKind::Binary { left, right, .. } => {
                 left.validate(ctx)?;
                 right.validate(ctx)
             }

@@ -47,9 +47,10 @@ pub enum ExprKind {
 }
 
 pub type Expr = Spanned<ExprKind>;
+pub type UnitExpr = Spanned<UnitExprKind>;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum UnitExpr {
+pub enum UnitExprKind {
     Symbol(String),
     Power {
         base: Box<UnitExpr>,

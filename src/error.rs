@@ -44,7 +44,7 @@ impl Error {
             message,
             line,
             column,
-            span: 0,
+            span: 1,
             filename: String::new(),
             line_text: String::new(),
         }

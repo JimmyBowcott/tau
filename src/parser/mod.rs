@@ -3,6 +3,7 @@ pub mod stmt;
 pub mod unit;
 
 use crate::ast::Stmt;
+use crate::error::Error;
 use crate::token::{Token, TokenKind};
 
 pub struct Parser {
@@ -15,7 +16,7 @@ impl Parser {
         Self { tokens, pos: 0 }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, String> {
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, Error> {
         let mut stmts = Vec::new();
         while !self.is_at_end() {
             if let Some(stmt) = self.parse_stmt()? {

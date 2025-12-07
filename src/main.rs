@@ -11,7 +11,7 @@ fn compile_and_execute(source: &str) -> Result<(), Error> {
     let tokens = lexer.collect();
 
     let mut parser = Parser::new(tokens);
-    let stmts = parser.parse().map_err(|e| Error::new(1, 1, e))?;
+    let stmts = parser.parse()?;
 
     let mut analyser = Analyser::new();
     analyser.analyse(&stmts).map_err(|e| Error::new(1, 1, e))?;

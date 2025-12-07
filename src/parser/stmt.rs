@@ -1,12 +1,11 @@
 use crate::{
-    ast::{Expr, ExprKind, Stmt, UnitExpr},
-    token::{Token, TokenKind},
+    ast::{Expr, ExprKind, Stmt, UnitExpr}, error::Error, token::{Token, TokenKind}
 };
 
 use super::Parser;
 
 impl Parser {
-    pub fn parse_stmt(&mut self) -> Result<Option<Stmt>, String> {
+    pub fn parse_stmt(&mut self) -> Result<Option<Stmt>, Error> {
         let token = match self.peek() {
             Some(t) => t,
             _ => return Ok(None),
@@ -21,30 +20,32 @@ impl Parser {
                 kind: TokenKind::Print,
                 ..
             } => self.parse_print_stmt().map(Some),
-            _ => Err(format!("Line {}:{}: unexpected token '{}'", token.line, token.column, token.kind)),
+            _ => Err(Error::new(token.line, token.column, format!("Unexpected token: {}", token.kind))),
         }
     }
 
-    pub fn expect_token(&mut self, expected: TokenKind, err_msg: &str) -> Result<(), String> {
+    pub fn expect_token(&mut self, expected: TokenKind, err_msg: &str) -> Result<(), Error> {
         match self.advance() {
             Some(token) if token.kind == expected => Ok(()),
-            Some(token) => Err(format!("Line {}:{}: {}", token.line, token.column, err_msg)),
-            None => Err("Unexpected end of input".into()),
+            Some(Token { line, column, .. }) => Err(Error::new(*line, *column, err_msg.into())),
+            // TODO: Add correct location
+            None => Err(Error::new(1, 1,"Unexpected end of input".into())),
         }
     }
 
-    fn expect_identifier(&mut self, err_msg: &str) -> Result<String, String> {
+    fn expect_identifier(&mut self, err_msg: &str) -> Result<String, Error> {
         match self.advance() {
             Some(Token {
                 kind: TokenKind::Identifier(id),
                 ..
             }) => Ok(id.clone()),
-            Some(Token { line, column, .. }) => Err(format!("Line {}:{}, {}", line, column, err_msg)),
-            _ => Err(format!("{}", err_msg)),
+            Some(Token { line, column, .. }) => Err(Error::new(*line, *column, err_msg.into())),
+            // TODO: Add correct location
+            _ => Err(Error::new(1, 1, err_msg.into())),
         }
     }
 
-    fn expect_unit(&mut self, err_msg: &str) -> Result<UnitExpr, String> {
+    fn expect_unit(&mut self, err_msg: &str) -> Result<UnitExpr, Error> {
         self.advance();
 
         match self.peek() {
@@ -52,12 +53,12 @@ impl Parser {
                 kind: TokenKind::Identifier(_),
                 ..
             }) => Ok(self.parse_unit_expr()?),
-            Some(Token { line, column, .. }) => Err(format!("Line {}:{}, {}", line, column, err_msg)),
-            _ => Err(format!("{}", err_msg)),
+            Some(Token { line, column, .. }) => Err(Error::new(*line, *column, err_msg.into())),
+            _ => Err(Error::new(1,1, err_msg.into())),
         }
     }
 
-    fn parse_let_stmt(&mut self) -> Result<Stmt, String> {
+    fn parse_let_stmt(&mut self) -> Result<Stmt, Error> {
         self.advance();
 
         let name = self.expect_identifier("Expected identifier after 'let'")?;
@@ -72,12 +73,12 @@ impl Parser {
         }
 
         self.expect_token(TokenKind::Equal, "Expected '='")?;
-        let value = self.parse_expr().map_err(|e| e.to_string())?;
+        let value = self.parse_expr()?;
 
         Ok(Stmt::Let { name, unit, value })
     }
 
-    fn parse_print_stmt(&mut self) -> Result<Stmt, String> {
+    fn parse_print_stmt(&mut self) -> Result<Stmt, Error> {
         self.advance();
         let expr: Expr;
 
@@ -91,7 +92,7 @@ impl Parser {
             expr = Expr::new(ExprKind::Identifier(name.clone()), *line, *column);
             self.advance();
         } else {
-            expr = self.parse_expr().map_err(|e| e.to_string())?;
+            expr = self.parse_expr()?;
         }
 
         Ok(Stmt::Print(expr))
@@ -100,7 +101,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{BinaryOp, Expr, ExprKind, Stmt, UnitExpr, UnitOp};
+    use crate::ast::{BinaryOp, Expr, ExprKind, Stmt, UnitExpr, UnitExprKind, UnitOp};
     use crate::parser::Parser;
     use crate::token::{Token, TokenKind};
 
@@ -146,11 +147,11 @@ mod tests {
         let mut parser = make_parser(tokens);
         let stmt = parser.parse_stmt().unwrap().unwrap();
 
-        let expected_unit = UnitExpr::Binary {
-            left: Box::new(UnitExpr::Symbol("m".into())),
+        let expected_unit = UnitExpr::new(UnitExprKind::Binary {
+            left: Box::new(UnitExpr::new(UnitExprKind::Symbol("m".into()), 1, 1)),
             op: UnitOp::Divide,
-            right: Box::new(UnitExpr::Symbol("s".into())),
-        };
+            right: Box::new(UnitExpr::new(UnitExprKind::Symbol("s".into()), 1, 1)),
+        }, 1, 1);
 
         assert_eq!(
             stmt,
@@ -205,7 +206,7 @@ mod tests {
         ];
         let mut parser = make_parser(tokens);
         let err = parser.parse_stmt().unwrap_err();
-        assert!(err.contains("Expected identifier after 'let'"));
+        assert!(err.message.contains("Expected identifier after 'let'"));
     }
 
     #[test]
@@ -216,7 +217,7 @@ mod tests {
         ];
         let mut parser = make_parser(tokens);
         let err = parser.parse_stmt().unwrap_err();
-        assert!(err.contains(" ")); // TODO: Fix this... The error is actually getting caught
+        assert!(err.message.contains(" ")); // TODO: Fix this... The error is actually getting caught
                                     // before here
     }
 
@@ -231,6 +232,6 @@ mod tests {
         ];
         let mut parser = make_parser(tokens);
         let err = parser.parse_stmt().unwrap_err();
-        assert!(err.contains("Expected unit after ':'"));
+        assert!(err.message.contains("Expected unit after ':'"));
     }
 }
