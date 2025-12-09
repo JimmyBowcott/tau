@@ -9,11 +9,18 @@ use crate::token::{Token, TokenKind};
 pub struct Parser {
     tokens: Vec<Token>,
     pos: usize,
+    line: usize,
+    column: usize,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, pos: 0 }
+        Self {
+            tokens,
+            pos: 0,
+            line: 1,
+            column: 1,
+        }
     }
 
     pub fn parse(&mut self) -> Result<Vec<Stmt>, Error> {
@@ -39,6 +46,8 @@ impl Parser {
         }
         let tok = &self.tokens[self.pos];
         self.pos += 1;
+        self.line = tok.line;
+        self.column = tok.column;
         Some(tok)
     }
 

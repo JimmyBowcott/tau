@@ -69,8 +69,7 @@ impl Parser {
                 *column,
                 "Expected unit identifier".into(),
             )),
-            // TODO: Add correct location
-            _ => Err(Error::new(1, 1, "Expected unit identifier".into())),
+            _ => Err(Error::new(self.line, self.column, "Expected unit identifier".into())),
         }
     }
 

@@ -28,8 +28,7 @@ impl Parser {
         match self.advance() {
             Some(token) if token.kind == expected => Ok(()),
             Some(Token { line, column, .. }) => Err(Error::new(*line, *column, err_msg.into())),
-            // TODO: Add correct location
-            None => Err(Error::new(1, 1,"Unexpected end of input".into())),
+            None => Err(Error::new(self.line, self.column, "Unexpected end of input".into())),
         }
     }
 
@@ -40,8 +39,7 @@ impl Parser {
                 ..
             }) => Ok(id.clone()),
             Some(Token { line, column, .. }) => Err(Error::new(*line, *column, err_msg.into())),
-            // TODO: Add correct location
-            _ => Err(Error::new(1, 1, err_msg.into())),
+            _ => Err(Error::new(self.line, self.column, err_msg.into())),
         }
     }
 
@@ -54,7 +52,7 @@ impl Parser {
                 ..
             }) => Ok(self.parse_unit_expr()?),
             Some(Token { line, column, .. }) => Err(Error::new(*line, *column, err_msg.into())),
-            _ => Err(Error::new(1,1, err_msg.into())),
+            _ => Err(Error::new(self.line, self.column, err_msg.into())),
         }
     }
 
