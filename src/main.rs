@@ -6,7 +6,7 @@ use tau::{
 };
 
 fn compile_and_execute(source: &str) -> Result<(), Error> {
-    // TODO: Implement correct error types for these other two...
+    // TODO: Implement correct error types for analyser
     let lexer = Lexer::new(source);
     let tokens = lexer.collect();
 
@@ -23,23 +23,15 @@ fn compile_and_execute(source: &str) -> Result<(), Error> {
     Ok(())
 }
 
-fn run() -> Result<(), Error> {
-    use std::env;
-    let args: Vec<String> = env::args().collect();
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("{}", e);
+        process::exit(1);
+    }
+}
 
-    // TODO: Check for exactly one argument!
-    let (name, text) = if args.len() > 1 {
-        let path = &args[1];
-        let text = std::fs::read_to_string(path).map_err(|e| Error::io(&args[1], e))?;
-        (path.clone(), text)
-    } else {
-        use std::io::{self, Read};
-        let mut buffer = String::new();
-        io::stdin()
-            .read_to_string(&mut buffer)
-            .map_err(|e| Error::io("<stdin>", e))?;
-        ("<stdin>".to_string(), buffer)
-    };
+fn run() -> Result<(), Error> {
+    let (name, text) = get_input()?;
 
     let source = SourceFile::new(name.clone(), text);
     compile_and_execute(&source.text)
@@ -47,9 +39,28 @@ fn run() -> Result<(), Error> {
     Ok(())
 }
 
-fn main() {
-    if let Err(e) = run() {
-        eprintln!("{}", e);
-        process::exit(1);
+fn get_input() -> Result<(String, String), Error> {
+    let args: Vec<String> = std::env::args().collect();
+
+    match args.len() {
+        1 => read_stdin().map(|t| ("<stdin>".to_string(), t)),
+        2 => {
+            let path = args[1].clone();
+            read_file(&path).map(|t| (path, t))
+        }
+        _ => Err(Error::new(1, 1, format!("Usage: {} [file.tau]", args[0]))),
     }
+}
+
+fn read_file(path: &str) -> Result<String, Error> {
+    std::fs::read_to_string(path).map_err(|e| Error::io(path, e))
+}
+
+fn read_stdin() -> Result<String, Error> {
+    use std::io::{self, Read};
+    let mut buffer = String::new();
+    io::stdin()
+        .read_to_string(&mut buffer)
+        .map_err(|e| Error::io("<stdin>", e))?;
+    Ok(buffer)
 }
