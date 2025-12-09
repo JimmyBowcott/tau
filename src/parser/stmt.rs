@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expr, ExprKind, Stmt, UnitExpr}, error::Error, token::{Token, TokenKind}
+    ast::{Expr, ExprKind, Stmt, StmtKind, UnitExpr}, error::Error, token::{Token, TokenKind}
 };
 
 use super::Parser;
@@ -57,6 +57,8 @@ impl Parser {
     }
 
     fn parse_let_stmt(&mut self) -> Result<Stmt, Error> {
+        let stmt_line = self.line.clone();
+        let stmt_col = self.column.clone();
         self.advance();
 
         let name = self.expect_identifier("Expected identifier after 'let'")?;
@@ -73,12 +75,14 @@ impl Parser {
         self.expect_token(TokenKind::Equal, "Expected '='")?;
         let value = self.parse_expr()?;
 
-        Ok(Stmt::Let { name, unit, value })
+        Ok(Stmt::new(StmtKind::Let { name, unit, value }, stmt_line, stmt_col))
     }
 
     fn parse_print_stmt(&mut self) -> Result<Stmt, Error> {
-        self.advance();
+        let stmt_line = self.line.clone();
+        let stmt_col = self.column.clone();
         let expr: Expr;
+        self.advance();
 
         if let Some(Token {
             kind: TokenKind::Identifier(name),
@@ -93,13 +97,13 @@ impl Parser {
             expr = self.parse_expr()?;
         }
 
-        Ok(Stmt::Print(expr))
+        Ok(Stmt::new(StmtKind::Print(expr), stmt_line, stmt_col))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{BinaryOp, Expr, ExprKind, Stmt, UnitExpr, UnitExprKind, UnitOp};
+    use crate::ast::{BinaryOp, Expr, ExprKind, StmtKind, UnitExpr, UnitExprKind, UnitOp};
     use crate::parser::Parser;
     use crate::token::{Token, TokenKind};
 
@@ -117,11 +121,11 @@ mod tests {
         ];
 
         let mut parser = make_parser(tokens);
-        let stmt = parser.parse_stmt().unwrap().unwrap();
+        let stmt = parser.parse_stmt().unwrap().unwrap().node;
 
         assert_eq!(
             stmt,
-            Stmt::Let {
+            StmtKind::Let {
                 name: "x".into(),
                 unit: None,
                 value: Expr::new(ExprKind::Number(42.0), 0, 0),
@@ -143,7 +147,7 @@ mod tests {
         ];
 
         let mut parser = make_parser(tokens);
-        let stmt = parser.parse_stmt().unwrap().unwrap();
+        let stmt = parser.parse_stmt().unwrap().unwrap().node;
 
         let expected_unit = UnitExpr::new(UnitExprKind::Binary {
             left: Box::new(UnitExpr::new(UnitExprKind::Symbol("m".into()), 1, 1)),
@@ -153,7 +157,7 @@ mod tests {
 
         assert_eq!(
             stmt,
-            Stmt::Let {
+            StmtKind::Let {
                 name: "v".into(),
                 unit: Some(expected_unit),
                 value: Expr::new(ExprKind::Number(10.0), 0, 0),
@@ -169,9 +173,9 @@ mod tests {
         ];
 
         let mut parser = make_parser(tokens);
-        let stmt = parser.parse_stmt().unwrap().unwrap();
+        let stmt = parser.parse_stmt().unwrap().unwrap().node;
 
-        assert_eq!(stmt, Stmt::Print(Expr::new(ExprKind::Identifier("x".into()), 0, 0)));
+        assert_eq!(stmt, StmtKind::Print(Expr::new(ExprKind::Identifier("x".into()), 0, 0)));
     }
 
     #[test]
@@ -184,7 +188,7 @@ mod tests {
         ];
 
         let mut parser = make_parser(tokens);
-        let stmt = parser.parse_stmt().unwrap().unwrap();
+        let stmt = parser.parse_stmt().unwrap().unwrap().node;
 
         let expected_expr = Expr::new(ExprKind::Binary {
             left: Box::new(Expr::new(ExprKind::Number(3.14), 0, 0)),
@@ -192,7 +196,7 @@ mod tests {
             right: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
         }, 0, 0);
 
-        assert_eq!(stmt, Stmt::Print(expected_expr));
+        assert_eq!(stmt, StmtKind::Print(expected_expr));
     }
 
     #[test]

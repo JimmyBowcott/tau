@@ -48,6 +48,7 @@ pub enum ExprKind {
 
 pub type Expr = Spanned<ExprKind>;
 pub type UnitExpr = Spanned<UnitExprKind>;
+pub type Stmt = Spanned<StmtKind>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum UnitExprKind {
@@ -64,7 +65,7 @@ pub enum UnitExprKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Stmt {
+pub enum StmtKind {
     Expr(Expr),
     Let {
         name: String,
@@ -116,15 +117,15 @@ impl Expr {
 
 impl Stmt {
     pub fn exec(&self, env: &mut Env) -> Result<(), Error> {
-        match self {
-            Stmt::Expr(expr) => {
+        match &self.node {
+            StmtKind::Expr(expr) => {
                 expr.eval(env)?;
             }
-            Stmt::Let { name, value, .. } => {
+            StmtKind::Let { name, value, .. } => {
                 let val = value.eval(env)?;
                 env.insert(name.clone(), val);
             }
-            Stmt::Print(expr) => {
+            StmtKind::Print(expr) => {
                 let val = expr.eval(env)?;
                 println!("{}", val);
             }
@@ -135,7 +136,7 @@ impl Stmt {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{BinaryOp, Expr, ExprKind, Stmt};
+    use crate::ast::{BinaryOp, Expr, ExprKind, Stmt, StmtKind};
     use crate::runtime::Env;
 
     fn env() -> Env {
@@ -182,11 +183,11 @@ mod tests {
     #[test]
     fn exec_let_statement() {
         let mut env = env();
-        let stmt = Stmt::Let {
+        let stmt = Stmt::new(StmtKind::Let {
             name: "x".into(),
             value: Expr::new(ExprKind::Number(10.0), 0, 0),
             unit: None,
-        };
+        }, 1, 1);
         stmt.exec(&mut env).unwrap();
         assert_eq!(*env.get("x").unwrap(), 10.0);
     }

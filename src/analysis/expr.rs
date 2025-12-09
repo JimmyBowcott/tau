@@ -14,7 +14,9 @@ impl Expr {
     pub fn check_declared(&self, ctx: &mut Analyser) -> Result<(), Error> {
         match &self.node {
             ExprKind::Number(_) => Ok(()),
-            ExprKind::Identifier(name) => ctx.symbols.check_declared(name).map_err(|e| self.error(e)),
+            ExprKind::Identifier(name) => {
+                ctx.symbols.check_declared(name).map_err(|e| self.error(e))
+            }
             ExprKind::Binary { left, right, .. } => {
                 left.check_declared(ctx)?;
                 right.check_declared(ctx)
@@ -62,19 +64,22 @@ impl Expr {
 
                     BinaryOp::Multiply => Ok(ldim.add(&rdim)),
                     BinaryOp::Divide => Ok(ldim.sub(&rdim)),
-                    BinaryOp::Power => match right.node {
-                        ExprKind::Number(exp_val) => {
-                            if (exp_val.fract()).abs() > std::f64::EPSILON {
-                                return Err(self.error(format!(
-                                    "Non-integer exponent {} not allowed for units",
-                                    exp_val
-                                )));
+                    BinaryOp::Power => {
+                        match right.node {
+                            ExprKind::Number(exp_val) => {
+                                if (exp_val.fract()).abs() > std::f64::EPSILON {
+                                    return Err(self.error(format!(
+                                        "Non-integer exponent {} not allowed for units",
+                                        exp_val
+                                    )));
+                                }
+                                let n = exp_val as i32;
+                                Ok(ldim.mul(n as f64))
                             }
-                            let n = exp_val as i32;
-                            Ok(ldim.mul(n as f64))
+                            _ => Err(self
+                                .error("Exponent must be a dimensionless numeric literal)".into())),
                         }
-                        _ => Err(self.error("Exponent must be a dimensionless numeric literal)".into())),
-                    },
+                    }
                 }
             }
         }
@@ -97,9 +102,12 @@ impl Expr {
 }
 
 impl UnitExpr {
-    pub fn validate(&self, ctx: &mut Analyser) -> Result<(), String> {
+    pub fn validate(&self, ctx: &mut Analyser) -> Result<(), Error> {
         match &self.node {
-            UnitExprKind::Symbol(s) => ctx.units.validate(s),
+            UnitExprKind::Symbol(s) => ctx
+                .units
+                .validate(s)
+                .map_err(|e| Error::new(self.line, self.column, e)),
             UnitExprKind::Power { base, .. } => base.validate(ctx),
             UnitExprKind::Binary { left, right, .. } => {
                 left.validate(ctx)?;

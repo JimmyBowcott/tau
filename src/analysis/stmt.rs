@@ -1,27 +1,27 @@
-use crate::ast::Stmt;
+use crate::{ast::{Stmt, StmtKind}, error::Error};
 
 use super::Analyser;
 
 impl Stmt {
-    pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), String> {
-        match self {
-            Stmt::Let { name, value, unit } => {
+    pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), Error> {
+        match &self.node {
+            StmtKind::Let { name, value, unit } => {
                 if let Some(u) = unit {
                     u.validate(ctx)?;
                 }
 
                 let unit = match unit {
                     Some(u) => ctx.get_unit(u)?,
-                    None => value.get_unit(ctx).map_err(|e| e.to_string())?,
+                    None => value.get_unit(ctx)?,
                 };
 
-                value.check_declared(ctx).map_err(|e| e.to_string())?;
-                value.assert_unit(ctx, &unit).map_err(|e| e.to_string())?;
-                ctx.symbols.declare(name, unit)?;
+                value.check_declared(ctx)?;
+                value.assert_unit(ctx, &unit)?;
+                ctx.symbols.declare(name, unit).map_err(|e| Error::new(self.line, self.column, e))?;
                 ctx.symbols.define(name);
                 Ok(())
             }
-            Stmt::Print(expr) | Stmt::Expr(expr) => expr.validate(ctx).map_err(|e| e.to_string()),
+            StmtKind::Print(expr) | StmtKind::Expr(expr) => expr.validate(ctx),
         }
     }
 }

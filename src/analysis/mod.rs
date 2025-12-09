@@ -6,7 +6,7 @@ mod units;
 pub use symbols::*;
 use units::UnitTable;
 
-use crate::ast::Stmt;
+use crate::{ast::Stmt, error::Error};
 
 pub struct Analyser {
     pub symbols: SymbolTable,
@@ -21,7 +21,7 @@ impl Analyser {
         }
     }
 
-    pub fn analyse(&mut self, stmts: &Vec<Stmt>) -> Result<(), String> {
+    pub fn analyse(&mut self, stmts: &Vec<Stmt>) -> Result<(), Error> {
         for stmt in stmts {
             stmt.analyse(self)?;
         }
@@ -32,14 +32,14 @@ impl Analyser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{Expr, ExprKind};
+    use crate::ast::{Expr, ExprKind, StmtKind};
 
     fn stmt_let(name: &str, value: Expr) -> Stmt {
-        Stmt::Let {
+        Stmt::new(StmtKind::Let {
             name: name.to_string(),
             unit: None,
             value,
-        }
+        }, 1, 1)
     }
 
     #[test]
@@ -65,7 +65,7 @@ mod tests {
         let mut ctx = Analyser::new();
         let res = ctx.analyse(&stmts);
         assert!(res.is_err());
-        assert!(res.unwrap_err().contains("Undeclared variable 'b'"));
+        assert!(res.unwrap_err().message.contains("Undeclared variable 'b'"));
     }
 
     #[test]
@@ -79,6 +79,6 @@ mod tests {
         let mut ctx = Analyser::new();
         let res = ctx.analyse(&stmts);
         assert!(res.is_err());
-        assert!(res.unwrap_err().contains("Variable 'a' already declared"));
+        assert!(res.unwrap_err().message.contains("Variable 'a' already declared"));
     }
 }

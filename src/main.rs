@@ -14,7 +14,7 @@ fn compile_and_execute(source: &str) -> Result<(), Error> {
     let stmts = parser.parse()?;
 
     let mut analyser = Analyser::new();
-    analyser.analyse(&stmts).map_err(|e| Error::new(1, 1, e))?;
+    analyser.analyse(&stmts)?;
 
     let mut env = Env::new();
     for stmt in stmts {

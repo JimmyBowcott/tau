@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt};
 
 use super::{Analyser, dimension::Dimension};
-use crate::ast::{UnitExpr, UnitExprKind, UnitOp};
+use crate::{ast::{UnitExpr, UnitExprKind, UnitOp}, error::Error};
 
 #[derive(Clone, Debug)]
 pub struct Unit {
@@ -225,13 +225,13 @@ const PREFIXES: &[(&'static str, f64)] = &[
 ];
 
 impl Analyser {
-    pub fn get_unit(&self, expr: &UnitExpr) -> Result<Unit, String> {
+    pub fn get_unit(&self, expr: &UnitExpr) -> Result<Unit, Error> {
         match &expr.node {
             UnitExprKind::Symbol(name) => {
                 let unit = self.units.get_unit(name);
                 match unit {
                     Some(u) => Ok(u),
-                    None => Err(format!("Unknown unit {}", name)),
+                    None => Err(Error::new(expr.line, expr.column, format!("Unknown unit {}", name))),
                 }
             }
             UnitExprKind::Binary { left, op, right } => {
