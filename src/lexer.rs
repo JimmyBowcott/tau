@@ -20,7 +20,7 @@ impl Lexer {
         Self {
             position: 0,
             line: 1,
-            column: 0,
+            column: 1,
             chars: input.chars().collect(),
         }
     }
@@ -44,7 +44,7 @@ impl Lexer {
         if let Some(chr) = c {
             if chr == '\n' {
                 self.line += 1;
-                self.column = 0;
+                self.column = 1;
             } else {
                 self.column += 1;
             }
