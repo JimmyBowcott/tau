@@ -27,6 +27,8 @@ impl Stmt {
                 ctx.symbols.define(name);
                 Ok(())
             }
+            // TODO: Add analysis for assignments
+            StmtKind::Assign { .. } => Ok(()),
             StmtKind::Print(expr) | StmtKind::Expr(expr) => expr.validate(ctx),
         }
     }

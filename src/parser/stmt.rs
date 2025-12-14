@@ -1,5 +1,7 @@
 use crate::{
-    ast::{Expr, ExprKind, Stmt, StmtKind, UnitExpr}, error::Error, token::{Token, TokenKind}
+    ast::{Expr, ExprKind, Stmt, StmtKind, UnitExpr},
+    error::Error,
+    token::{Token, TokenKind},
 };
 
 use super::Parser;
@@ -11,16 +13,15 @@ impl Parser {
             _ => return Ok(None),
         };
 
-        match token {
-            Token {
-                kind: TokenKind::Let | TokenKind::Const,
-                ..
-            } => self.parse_let_stmt().map(Some),
-            Token {
-                kind: TokenKind::Print,
-                ..
-            } => self.parse_print_stmt().map(Some),
-            _ => Err(Error::new(token.line, token.column, format!("Unexpected token: {}", token.kind))),
+        match &token.kind {
+            TokenKind::Let | TokenKind::Const => self.parse_let_stmt().map(Some),
+            TokenKind::Identifier(_) => self.parse_assignment().map(Some),
+            TokenKind::Print => self.parse_print_stmt().map(Some),
+            _ => Err(Error::new(
+                token.line,
+                token.column,
+                format!("Unexpected token: {}", token.kind),
+            )),
         }
     }
 
@@ -28,7 +29,11 @@ impl Parser {
         match self.advance() {
             Some(token) if token.kind == expected => Ok(()),
             Some(Token { line, column, .. }) => Err(Error::new(*line, *column, err_msg.into())),
-            None => Err(Error::new(self.line, self.column, "Unexpected end of input".into())),
+            None => Err(Error::new(
+                self.line,
+                self.column,
+                "Unexpected end of input".into(),
+            )),
         }
     }
 
@@ -75,7 +80,25 @@ impl Parser {
         self.expect_token(TokenKind::Equal, "Expected '='")?;
         let value = self.parse_expr()?;
 
-        Ok(Stmt::new(StmtKind::Let { name, unit, value }, stmt_line, stmt_col))
+        Ok(Stmt::new(
+            StmtKind::Let { name, unit, value },
+            stmt_line,
+            stmt_col,
+        ))
+    }
+
+    fn parse_assignment(&mut self) -> Result<Stmt, Error> {
+        let stmt_line = self.line.clone();
+        let stmt_col = self.column.clone();
+        let name = self.expect_identifier("Internal error - expected identifier to be identifier.")?;
+        self.expect_token(TokenKind::Equal, "Expected '='")?;
+        let value = self.parse_expr()?;
+
+        Ok(Stmt::new(
+            StmtKind::Assign { name, value },
+            stmt_line,
+            stmt_col,
+        ))
     }
 
     fn parse_print_stmt(&mut self) -> Result<Stmt, Error> {
@@ -149,11 +172,15 @@ mod tests {
         let mut parser = make_parser(tokens);
         let stmt = parser.parse_stmt().unwrap().unwrap().node;
 
-        let expected_unit = UnitExpr::new(UnitExprKind::Binary {
-            left: Box::new(UnitExpr::new(UnitExprKind::Symbol("m".into()), 1, 1)),
-            op: UnitOp::Divide,
-            right: Box::new(UnitExpr::new(UnitExprKind::Symbol("s".into()), 1, 1)),
-        }, 1, 1);
+        let expected_unit = UnitExpr::new(
+            UnitExprKind::Binary {
+                left: Box::new(UnitExpr::new(UnitExprKind::Symbol("m".into()), 1, 1)),
+                op: UnitOp::Divide,
+                right: Box::new(UnitExpr::new(UnitExprKind::Symbol("s".into()), 1, 1)),
+            },
+            1,
+            1,
+        );
 
         assert_eq!(
             stmt,
@@ -175,7 +202,10 @@ mod tests {
         let mut parser = make_parser(tokens);
         let stmt = parser.parse_stmt().unwrap().unwrap().node;
 
-        assert_eq!(stmt, StmtKind::Print(Expr::new(ExprKind::Identifier("x".into()), 0, 0)));
+        assert_eq!(
+            stmt,
+            StmtKind::Print(Expr::new(ExprKind::Identifier("x".into()), 0, 0))
+        );
     }
 
     #[test]
@@ -190,11 +220,15 @@ mod tests {
         let mut parser = make_parser(tokens);
         let stmt = parser.parse_stmt().unwrap().unwrap().node;
 
-        let expected_expr = Expr::new(ExprKind::Binary {
-            left: Box::new(Expr::new(ExprKind::Number(3.14), 0, 0)),
-            op: BinaryOp::Add,
-            right: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
-        }, 0, 0);
+        let expected_expr = Expr::new(
+            ExprKind::Binary {
+                left: Box::new(Expr::new(ExprKind::Number(3.14), 0, 0)),
+                op: BinaryOp::Add,
+                right: Box::new(Expr::new(ExprKind::Number(2.0), 0, 0)),
+            },
+            0,
+            0,
+        );
 
         assert_eq!(stmt, StmtKind::Print(expected_expr));
     }
@@ -220,7 +254,7 @@ mod tests {
         let mut parser = make_parser(tokens);
         let err = parser.parse_stmt().unwrap_err();
         assert!(err.message.contains(" ")); // TODO: Fix this... The error is actually getting caught
-                                    // before here
+        // before here
     }
 
     #[test]

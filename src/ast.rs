@@ -77,6 +77,10 @@ pub enum StmtKind {
         unit: Option<UnitExpr>,
         value: Expr,
     },
+    Assign {
+        name: String,
+        value: Expr,
+    },
     Print(Expr),
 }
 
@@ -131,6 +135,10 @@ impl Stmt {
                 env.insert(name.clone(), val);
             }
             StmtKind::Const { name, value, .. } => {
+                let val = value.eval(env)?;
+                env.insert(name.clone(), val);
+            }
+            StmtKind::Assign { name, value, .. } => {
                 let val = value.eval(env)?;
                 env.insert(name.clone(), val);
             }
