@@ -13,7 +13,7 @@ impl Parser {
 
         match token {
             Token {
-                kind: TokenKind::Let,
+                kind: TokenKind::Let | TokenKind::Const,
                 ..
             } => self.parse_let_stmt().map(Some),
             Token {

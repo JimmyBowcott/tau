@@ -1,11 +1,15 @@
-use crate::{ast::{Stmt, StmtKind}, error::Error};
+use crate::{
+    ast::{Stmt, StmtKind},
+    error::Error,
+};
 
 use super::Analyser;
 
 impl Stmt {
     pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), Error> {
         match &self.node {
-            StmtKind::Let { name, value, unit } => {
+            StmtKind::Let { name, value, unit } |
+                StmtKind::Const { name, value, unit } => {
                 if let Some(u) = unit {
                     u.validate(ctx)?;
                 }
@@ -17,7 +21,9 @@ impl Stmt {
 
                 value.check_declared(ctx)?;
                 value.assert_unit(ctx, &unit)?;
-                ctx.symbols.declare(name, unit).map_err(|e| Error::new(self.line, self.column, e))?;
+                ctx.symbols
+                    .declare(name, unit)
+                    .map_err(|e| Error::new(self.line, self.column, e))?;
                 ctx.symbols.define(name);
                 Ok(())
             }
