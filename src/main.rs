@@ -43,7 +43,6 @@ fn get_input() -> Result<(String, String), Error> {
     let args: Vec<String> = std::env::args().collect();
 
     match args.len() {
-        1 => read_stdin().map(|t| ("<stdin>".to_string(), t)),
         2 => {
             let path = args[1].clone();
             read_file(&path).map(|t| (path, t))
@@ -54,13 +53,4 @@ fn get_input() -> Result<(String, String), Error> {
 
 fn read_file(path: &str) -> Result<String, Error> {
     std::fs::read_to_string(path).map_err(|e| Error::io(path, e))
-}
-
-fn read_stdin() -> Result<String, Error> {
-    use std::io::{self, Read};
-    let mut buffer = String::new();
-    io::stdin()
-        .read_to_string(&mut buffer)
-        .map_err(|e| Error::io("<stdin>", e))?;
-    Ok(buffer)
 }

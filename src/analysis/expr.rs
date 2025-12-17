@@ -126,27 +126,27 @@ mod tests {
         let mut analyser = Analyser::new();
         analyser
             .symbols
-            .declare("mass", Unit::new([1, 0, 0, 0, 0, 0, 0]))
+            .declare("mass", Unit::new([1, 0, 0, 0, 0, 0, 0]), false)
             .unwrap(); // kg
         analyser.symbols.define("mass");
         analyser
             .symbols
-            .declare("accel", Unit::new([0, 1, -2, 0, 0, 0, 0]))
+            .declare("accel", Unit::new([0, 1, -2, 0, 0, 0, 0]), false)
             .unwrap(); // m·s⁻²
         analyser.symbols.define("accel");
         analyser
             .symbols
-            .declare("force", Unit::new([1, 1, -2, 0, 0, 0, 0]))
+            .declare("force", Unit::new([1, 1, -2, 0, 0, 0, 0]), false)
             .unwrap(); // kg·m·s⁻² (N)
         analyser.symbols.define("force");
         analyser
             .symbols
-            .declare("pressure", Unit::new([1, -1, -2, 0, 0, 0, 0]))
+            .declare("pressure", Unit::new([1, -1, -2, 0, 0, 0, 0]), false)
             .unwrap(); // kg·m⁻¹·s⁻² (Pa)
         analyser.symbols.define("pressure");
         analyser
             .symbols
-            .declare("area", Unit::new([0, 2, 0, 0, 0, 0, 0]))
+            .declare("area", Unit::new([0, 2, 0, 0, 0, 0, 0]), false)
             .unwrap(); // m²
         analyser.symbols.define("area");
         analyser

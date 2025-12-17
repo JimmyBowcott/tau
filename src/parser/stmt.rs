@@ -14,7 +14,8 @@ impl Parser {
         };
 
         match &token.kind {
-            TokenKind::Let | TokenKind::Const => self.parse_let_stmt().map(Some),
+            TokenKind::Let => self.parse_let_stmt().map(Some),
+            TokenKind::Const => self.parse_const_stmt().map(Some),
             TokenKind::Identifier(_) => self.parse_assignment().map(Some),
             TokenKind::Print => self.parse_print_stmt().map(Some),
             _ => Err(Error::new(
@@ -82,6 +83,32 @@ impl Parser {
 
         Ok(Stmt::new(
             StmtKind::Let { name, unit, value },
+            stmt_line,
+            stmt_col,
+        ))
+    }
+
+    fn parse_const_stmt(&mut self) -> Result<Stmt, Error> {
+        let stmt_line = self.line.clone();
+        let stmt_col = self.column.clone();
+        self.advance();
+
+        let name = self.expect_identifier("Expected identifier after 'let'")?;
+        let mut unit = None;
+
+        if let Some(Token {
+            kind: TokenKind::Colon,
+            ..
+        }) = self.peek()
+        {
+            unit = Some(self.expect_unit("Expected unit after ':'")?);
+        }
+
+        self.expect_token(TokenKind::Equal, "Expected '='")?;
+        let value = self.parse_expr()?;
+
+        Ok(Stmt::new(
+            StmtKind::Const { name, unit, value },
             stmt_line,
             stmt_col,
         ))

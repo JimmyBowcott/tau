@@ -6,6 +6,7 @@ use super::units::Unit;
 pub struct Var {
     defined: bool,
     unit: Unit,
+    mutable: bool,
 }
 
 #[derive(Debug, Default)]
@@ -24,7 +25,7 @@ impl SymbolTable {
         self.vars.get(name).map(|v| v.unit.clone())
     }
 
-    pub fn declare(&mut self, name: &str, unit: Unit) -> Result<(), String> {
+    pub fn declare(&mut self, name: &str, unit: Unit, mutable: bool) -> Result<(), String> {
         if self.vars.contains_key(name) {
             return Err(format!("Variable '{}' already declared", name));
         }
@@ -33,6 +34,7 @@ impl SymbolTable {
             Var {
                 defined: false,
                 unit,
+                mutable,
             },
         );
         Ok(())
@@ -49,6 +51,44 @@ impl SymbolTable {
             Ok(())
         } else {
             Err(format!("Undeclared variable '{}'", name))
+        }
+    }
+
+    pub fn assign(&mut self, name: &str, unit: Unit) -> Result<(), String> {
+        self.check_declared(name)?;
+        self.check_mutable(name)?;
+        self.check_unit(name, unit)?;
+        Ok(())
+    }
+
+    fn check_mutable(&self, name: &str) -> Result<(), String> {
+        if let Some(var) = self.vars.get(name) {
+            if var.mutable {
+                return Ok(())
+            } else {
+                return Err(format!(
+                    "{} is a constant, use 'let' instead of 'const' to make it mutable",
+                    name
+                ))
+            }
+        } else {
+            return Err(format!("Undeclared variable '{}'", name))
+        }
+    }
+
+    fn check_unit(&self, name: &str, unit: Unit) -> Result<(), String> {
+        if let Some(var) = self.vars.get(name) {
+            if var.unit == unit {
+                return Ok(())
+            } else {
+                return Err(format!(
+                    "Expected {}, found {}",
+                    var.unit,
+                    unit,
+                ))
+            }
+        } else {
+            return Err(format!("Undeclared variable '{}'", name))
         }
     }
 }
