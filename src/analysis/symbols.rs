@@ -92,3 +92,83 @@ impl SymbolTable {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::Unit;
+
+    fn unit(dim: [i8; 7]) -> Unit {
+        Unit::new(dim)
+    }
+
+    #[test]
+    fn declare_and_get_unit() {
+        let mut table = SymbolTable::new();
+        let u = unit([1,0,0,0,0,0,0]);
+        assert!(table.declare("x", u.clone(), true).is_ok());
+        assert_eq!(table.get_unit("x"), Some(u.clone()));
+    }
+
+    #[test]
+    fn redeclare_variable_fails() {
+        let mut table = SymbolTable::new();
+        let u = unit([0; 7]);
+        assert!(table.declare("x", u.clone(), true).is_ok());
+        let err = table.declare("x", u.clone(), true).unwrap_err();
+        assert!(err.contains("already declared"));
+    }
+
+    #[test]
+    fn define_marks_defined() {
+        let mut table = SymbolTable::new();
+        let u = unit([0; 7]);
+        table.declare("x", u.clone(), true).unwrap();
+        table.define("x");
+        let var = table.vars.get("x").unwrap();
+        assert!(var.defined);
+    }
+
+    #[test]
+    fn check_declared() {
+        let mut table = SymbolTable::new();
+        table.declare("x", unit([0; 7]), true).unwrap();
+        assert!(table.check_declared("x").is_ok());
+    }
+
+    #[test]
+    fn check_undeclared() {
+        let table = SymbolTable::new();
+        let err = table.check_declared("y").unwrap_err();
+        assert!(err.contains("Undeclared"));
+    }
+
+    #[test]
+    fn assign_checks_unit() {
+        let mut table = SymbolTable::new();
+        let unit_1 = unit([1,0,0,0,0,0,0]);
+        let unit_2 = unit([0,1,0,0,0,0,0]);
+        table.declare("x", unit_1.clone(), true).unwrap();
+        assert!(table.assign("x", unit_1.clone()).is_ok());
+        let err = table.assign("x", unit_2.clone()).unwrap_err();
+        assert!(err.contains("Expected"));
+    }
+
+    #[test]
+    fn check_assign_to_undeclared() {
+        let mut table = SymbolTable::new();
+        let u = unit([0; 7]);
+        let err = table.assign("y", u.clone()).unwrap_err();
+        assert!(err.contains("Undeclared"));
+    }
+
+    #[test]
+    fn check_assign_to_const() {
+        let mut table = SymbolTable::new();
+        let u = unit([0; 7]);
+        table.declare("x", u.clone(), false).unwrap();
+        table.define("x");
+        let err = table.assign("x", u.clone()).unwrap_err();
+        assert!(err.contains("constant"));
+    }
+}

@@ -384,7 +384,7 @@ mod tests {
     #[test]
     fn test_column() {
         let input = "let a = 2;\nlet vel = 3;";
-        let expected = [0, 4, 6, 8, 9, 0, 4, 8, 10, 11];
+        let expected = [1, 5, 7, 9, 10, 1, 5, 9, 11, 12];
         let mut lexer = Lexer::new(input);
 
         for col in expected {
