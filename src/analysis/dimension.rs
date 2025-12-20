@@ -45,7 +45,7 @@ impl fmt::Display for Dimension {
         let names = ["kg", "m", "s", "A", "K", "mol", "cd"];
 
         if self.is_dimensionless() {
-            return write!(f, "1");
+            return write!(f, "dimensionless");
         }
 
         let res: Vec<String> = self
@@ -63,7 +63,7 @@ impl fmt::Display for Dimension {
             })
             .collect();
 
-        write!(f, "{}", res.join("•"))
+        write!(f, "{}", res.join("."))
     }
 }
 
