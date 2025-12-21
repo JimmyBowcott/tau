@@ -35,9 +35,9 @@ impl Expr {
     }
 
     pub fn get_unit(&self, ctx: &mut Analyser) -> Result<Unit, Error> {
-        let dimensionless = Unit::new([0; 7]);
+        let dimensionless = Unit::dimensionless();
         match &self.node {
-            ExprKind::Number(_) => Ok(Unit::new([0; 7])),
+            ExprKind::Number(_) => Ok(Unit::dimensionless()),
 
             ExprKind::Identifier(name) => ctx
                 .symbols
@@ -91,7 +91,7 @@ impl Expr {
     }
 
     fn assert_equal(&self, unit_1: &Unit, unit_2: &Unit) -> bool {
-        let dimensionless = &Unit::new([0; 7]);
+        let dimensionless = &Unit::dimensionless();
 
         if unit_1 == unit_2 || unit_1 == dimensionless || unit_2 == dimensionless {
             true
@@ -156,7 +156,7 @@ mod tests {
     fn number_is_dimensionless() {
         let expr = Expr::new(ExprKind::Number(9.81), 0, 0);
         let mut ctx = setup_analyser();
-        assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::new([0; 7]));
+        assert_eq!(expr.get_unit(&mut ctx).unwrap(), Unit::dimensionless());
     }
 
     #[test]

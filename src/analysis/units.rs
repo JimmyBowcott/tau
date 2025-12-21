@@ -259,6 +259,14 @@ impl Unit {
         }
     }
 
+    pub fn dimensionless() -> Self {
+        Self {
+            dimension: Dimension::new([0; 7]),
+            allows_prefix: false,
+            scale: 1.0,
+        }
+    }
+
     pub fn with_prefix(exponents: [i8; 7], allows_prefix: bool) -> Self {
         Self {
             dimension: Dimension::new(exponents),

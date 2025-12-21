@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_unit_display() {
-        let expected = "kg•m^2•s^3•A^4•K^5•mol^6•cd^7";
+        let expected = "kg.m^2.s^3.A^4.K^5.mol^6.cd^7";
         let actual = Dimension::new([1, 2, 3, 4, 5, 6, 7]).to_string();
         assert_eq!(expected, actual);
     }

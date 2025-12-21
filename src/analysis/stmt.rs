@@ -3,7 +3,7 @@ use crate::{
     error::Error,
 };
 
-use super::Analyser;
+use super::{units::Unit, Analyser};
 
 impl Stmt {
     pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), Error> {
@@ -17,21 +17,25 @@ impl Stmt {
     fn analyse_declaration(&self, ctx: &mut Analyser) -> Result<(), Error> {
         let (name, unit, value, mutable) = match &self.node {
             StmtKind::Let { name, unit, value } => (name, unit, value, true),
-            StmtKind::Const { name, unit, value } => (name, unit, value, false),
-            _ => unreachable!()
+            StmtKind::Const { name, unit, value } => (name, unit, &Some(value.clone()), false),
+            _ => unreachable!(),
         };
 
         if let Some(u) = unit {
             u.validate(ctx)?;
         }
 
-        let unit = match unit {
-            Some(u) => ctx.get_unit(u)?,
-            None => value.get_unit(ctx)?,
+        let unit = match (unit, value) {
+            (Some(u), _) => ctx.get_unit(u)?, // let v: m/s = d/t;
+            (None, Some(v)) => v.get_unit(ctx)?, // let v = d/t;
+            (None, None) => Unit::dimensionless(),                   // let v;
         };
 
-        value.check_declared(ctx)?;
-        value.assert_unit(ctx, &unit)?;
+        if let Some(v) = value {
+            v.check_declared(ctx)?;
+            v.assert_unit(ctx, &unit)?;
+        }
+
         ctx.symbols
             .declare(name, unit, mutable)
             .map_err(|e| Error::new(self.line, self.column, e))?;
@@ -42,11 +46,13 @@ impl Stmt {
     fn analyse_assign(&self, ctx: &mut Analyser) -> Result<(), Error> {
         let (name, value) = match &self.node {
             StmtKind::Assign { name, value } => (name, value),
-            _ => unreachable!()
+            _ => unreachable!(),
         };
 
         let unit = value.get_unit(ctx)?;
-        ctx.symbols.assign(name, unit).map_err(|e| Error::new(self.line, self.column, e))?;
+        ctx.symbols
+            .assign(name, unit)
+            .map_err(|e| Error::new(self.line, self.column, e))?;
         Ok(())
     }
 }

@@ -70,7 +70,7 @@ pub enum StmtKind {
     Let {
         name: String,
         unit: Option<UnitExpr>,
-        value: Expr,
+        value: Option<Expr>,
     },
     Const {
         name: String,
@@ -131,8 +131,10 @@ impl Stmt {
                 expr.eval(env)?;
             }
             StmtKind::Let { name, value, .. } => {
-                let val = value.eval(env)?;
-                env.insert(name.clone(), val);
+                if let Some(expr) = value {
+                    let val = expr.eval(env)?;
+                    env.insert(name.clone(), val);
+                }
             }
             StmtKind::Const { name, value, .. } => {
                 let val = value.eval(env)?;
@@ -202,7 +204,7 @@ mod tests {
         let mut env = env();
         let stmt = Stmt::new(StmtKind::Let {
             name: "x".into(),
-            value: Expr::new(ExprKind::Number(10.0), 0, 0),
+            value: Some(Expr::new(ExprKind::Number(10.0), 0, 0)),
             unit: None,
         }, 1, 1);
         stmt.exec(&mut env).unwrap();

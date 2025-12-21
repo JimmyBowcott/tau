@@ -38,7 +38,7 @@ mod tests {
         Stmt::new(StmtKind::Let {
             name: name.to_string(),
             unit: None,
-            value,
+            value: Some(value),
         }, 1, 1)
     }
 

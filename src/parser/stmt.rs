@@ -69,6 +69,7 @@ impl Parser {
 
         let name = self.expect_identifier("Expected identifier after 'let'")?;
         let mut unit = None;
+        let mut value = None;
 
         if let Some(Token {
             kind: TokenKind::Colon,
@@ -78,8 +79,14 @@ impl Parser {
             unit = Some(self.expect_unit("Expected unit after ':'")?);
         }
 
-        self.expect_token(TokenKind::Equal, "Expected '='")?;
-        let value = self.parse_expr()?;
+        if let Some(Token {
+            kind: TokenKind::Equal,
+            ..
+        }) = self.peek()
+        {
+            self.advance();
+            value = Some(self.parse_expr()?);
+        }
 
         Ok(Stmt::new(
             StmtKind::Let { name, unit, value },
@@ -178,7 +185,7 @@ mod tests {
             StmtKind::Let {
                 name: "x".into(),
                 unit: None,
-                value: Expr::new(ExprKind::Number(42.0), 0, 0),
+                value: Some(Expr::new(ExprKind::Number(42.0), 0, 0)),
             }
         );
     }
@@ -214,7 +221,7 @@ mod tests {
             StmtKind::Let {
                 name: "v".into(),
                 unit: Some(expected_unit),
-                value: Expr::new(ExprKind::Number(10.0), 0, 0),
+                value: Some(Expr::new(ExprKind::Number(10.0), 0, 0)),
             }
         );
     }
@@ -331,10 +338,11 @@ mod tests {
     }
 
     #[test]
-    fn parse_let_missing_equal_returns_err() {
+    fn parse_let_missing_unit_undefined_returns_err() {
         let tokens = vec![
             Token::new(TokenKind::Let, 1, 1, 3),
             Token::new(TokenKind::Identifier("x".into()), 1, 5, 1),
+            Token::new(TokenKind::Colon, 1, 6, 1),
         ];
         let mut parser = make_parser(tokens);
         let err = parser.parse_stmt().unwrap_err();
