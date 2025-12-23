@@ -3,7 +3,7 @@ use crate::{
     error::Error,
 };
 
-use super::{units::Unit, Analyser};
+use super::{Analyser, units::Unit};
 
 impl Stmt {
     pub fn analyse(&self, ctx: &mut Analyser) -> Result<(), Error> {
@@ -26,20 +26,23 @@ impl Stmt {
         }
 
         let unit = match (unit, value) {
-            (Some(u), _) => ctx.get_unit(u)?, // let v: m/s = d/t;
-            (None, Some(v)) => v.get_unit(ctx)?, // let v = d/t;
-            (None, None) => Unit::dimensionless(),                   // let v;
+            (Some(u), _) => ctx.get_unit(u)?,      // let v: m/s = d/t;
+            (None, Some(v)) => v.get_unit(ctx)?,   // let v = d/t;
+            (None, None) => Unit::dimensionless(), // let v;
         };
 
         if let Some(v) = value {
-            v.check_declared(ctx)?;
+            v.validate(ctx)?;
             v.assert_unit(ctx, &unit)?;
         }
 
         ctx.symbols
             .declare(name, unit, mutable)
             .map_err(|e| Error::new(self.line, self.column, e))?;
-        ctx.symbols.define(name);
+
+        if value.is_some() {
+            ctx.symbols.define(name);
+        }
         Ok(())
     }
 

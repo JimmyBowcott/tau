@@ -42,6 +42,14 @@ mod tests {
         }, 1, 1)
     }
 
+    fn stmt_let_unassigned(name: &str) -> Stmt {
+        Stmt::new(StmtKind::Let {
+            name: name.to_string(),
+            unit: None,
+            value: None,
+        }, 1, 1)
+    }
+
     #[test]
     fn analyser_accepts_simple_declarations() {
         // let a = 1; let b = a;
@@ -81,4 +89,19 @@ mod tests {
         assert!(res.is_err());
         assert!(res.unwrap_err().message.contains("Variable 'a' already declared"));
     }
+
+    #[test]
+    fn analyser_rejects_use_before_assign() {
+        // let a = b; let b = 2;
+        let stmts = vec![
+            stmt_let_unassigned("a"),
+            stmt_let("b", Expr::new(ExprKind::Identifier("a".into()), 0, 0)),
+        ];
+
+        let mut ctx = Analyser::new();
+        let res = ctx.analyse(&stmts);
+        assert!(res.is_err());
+        assert!(res.unwrap_err().message.contains("declared but not assigned"));
+    }
+
 }

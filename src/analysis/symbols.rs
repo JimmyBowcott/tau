@@ -54,6 +54,15 @@ impl SymbolTable {
         }
     }
 
+    pub fn check_assigned(&self, name: &str) -> Result<(), String> {
+        let val = self.vars.get(name).ok_or("Undeclared variable '{}'")?;
+        if val.defined {
+            Ok(())
+        } else {
+            Err(format!("Variable {} declared but not assigned", name))
+        }
+    }
+
     pub fn assign(&mut self, name: &str, unit: Unit) -> Result<(), String> {
         self.check_declared(name)?;
         self.check_mutable(name)?;

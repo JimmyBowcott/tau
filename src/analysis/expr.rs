@@ -7,6 +7,7 @@ use crate::{
 impl Expr {
     pub fn validate(&self, ctx: &mut Analyser) -> Result<(), Error> {
         self.check_declared(ctx)?;
+        self.check_assigned(ctx)?;
         self.check_unit_maths(ctx)?;
         Ok(())
     }
@@ -20,6 +21,19 @@ impl Expr {
             ExprKind::Binary { left, right, .. } => {
                 left.check_declared(ctx)?;
                 right.check_declared(ctx)
+            }
+        }
+    }
+
+    pub fn check_assigned(&self, ctx: &mut Analyser) -> Result<(), Error> {
+        match &self.node {
+            ExprKind::Number(_) => Ok(()),
+            ExprKind::Identifier(name) => {
+                ctx.symbols.check_assigned(name).map_err(|e| self.error(e))
+            }
+            ExprKind::Binary { left, right, .. } => {
+                left.check_assigned(ctx)?;
+                right.check_assigned(ctx)
             }
         }
     }
