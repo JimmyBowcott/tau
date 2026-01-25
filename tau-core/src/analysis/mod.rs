@@ -42,6 +42,13 @@ mod tests {
         }, 1, 1)
     }
 
+    fn stmt_assign(name: &str, value: Expr) -> Stmt {
+        Stmt::new(StmtKind::Assign {
+            name: name.to_string(),
+            value,
+        }, 1, 1)
+    }
+
     fn stmt_let_unassigned(name: &str) -> Stmt {
         Stmt::new(StmtKind::Let {
             name: name.to_string(),
@@ -104,4 +111,17 @@ mod tests {
         assert!(res.unwrap_err().message.contains("declared but not assigned"));
     }
 
+    #[test]
+    fn analyser_allows_use_after_assign() {
+        // let a = b; let b = 2;
+        let stmts = vec![
+            stmt_let_unassigned("a"),
+            stmt_assign("a", Expr::new(ExprKind::Number(2.0), 0, 0)),
+            stmt_let("b", Expr::new(ExprKind::Identifier("a".into()), 0, 0)),
+        ];
+
+        let mut ctx = Analyser::new();
+        let res = ctx.analyse(&stmts);
+        assert!(res.is_ok());
+    }
 }

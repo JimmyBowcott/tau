@@ -1,4 +1,4 @@
-use tau::{lexer::Lexer, token::{Token, TokenKind}};
+use tau_core::{lexer::Lexer, token::{Token, TokenKind}};
 
 #[test]
 fn test_simple_tokens() {

@@ -1,27 +1,7 @@
 use std::process;
 
-use tau::{
-    analysis::Analyser, error::Error, lexer::Lexer, parser::Parser, runtime::Env,
-    source::SourceFile,
-};
-
-fn compile_and_execute(source: &str) -> Result<(), Error> {
-    // TODO: Implement correct error types for analyser
-    let lexer = Lexer::new(source);
-    let tokens = lexer.collect();
-
-    let mut parser = Parser::new(tokens);
-    let stmts = parser.parse()?;
-
-    let mut analyser = Analyser::new();
-    analyser.analyse(&stmts)?;
-
-    let mut env = Env::new();
-    for stmt in stmts {
-        stmt.exec(&mut env)?;
-    }
-    Ok(())
-}
+use tau_cli::source::SourceFile;
+use tau_core::{error::Error, run_source};
 
 fn main() {
     if let Err(e) = run() {
@@ -34,7 +14,7 @@ fn run() -> Result<(), Error> {
     let (name, text) = get_input()?;
 
     let source = SourceFile::new(name.clone(), text);
-    compile_and_execute(&source.text)
+    run_source(&source.text)
         .map_err(|e| e.with_source(name.as_str(), source.get_line(e.line)))?;
     Ok(())
 }

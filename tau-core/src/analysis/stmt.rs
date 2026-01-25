@@ -56,6 +56,7 @@ impl Stmt {
         ctx.symbols
             .assign(name, unit)
             .map_err(|e| Error::new(self.line, self.column, e))?;
+        ctx.symbols.define(name);
         Ok(())
     }
 }

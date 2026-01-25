@@ -1,0 +1,16 @@
+let v: m/s;
+let k: m = 5;
+let t: s = 2;
+v = (0.5 * k) / (2 * t);
+print(v * 2);
+
+# parser error
+# let g = *;
+
+# This will sometimes print the error on the wrong line:
+#
+# let k: m = 5;
+# let t: s = 2;
+# let v: m/s = (0.5 * k) / (2 * t);
+# k = v;
+# print(v * 2);
