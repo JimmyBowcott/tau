@@ -3,6 +3,13 @@ name = "tau-wasm"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
+tau-core = { path = "../tau-core" }
 console_error_panic_hook = "0.1.7"
 wasm-bindgen = "0.2.108"
+
+[dev-dependencies]
+wasm-pack = "0.10"
