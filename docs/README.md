@@ -1,49 +1,74 @@
-# Starlight Starter Kit: Basics
+# Tau
+A statically checked unit-aware programming language that prevents dimensional mistakes at compile time.
+Tau lets you write variables in SI units so that your bad maths gets caught early on.
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+# Why Tau?
+Do you remember the time your engineering coursework took 2 hours too long because you wrote the wrong unit on a piece of MATLAB code? Well I do. This problem, among others, can be entirely avoided by using a progamming language that enforces explicitly typed units.
 
-```
-npm create astro@latest -- --template starlight
-```
-
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-## 🚀 Project Structure
-
-Inside of your Astro + Starlight project, you'll see the following folders and files:
-
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   └── docs/
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
+Most languages (MATLAB included) will let you do this:
+```MATLAB
+force = 10  % N? lbs?
+mass = 4  % kg? lbs?
+acceleration = mass - force % ???
 ```
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+In Tau:
+```Tau
+let force: N = 10;
+let mass: kg = 4;
+let acceleration = force - mass  # Error: Cannot subtract N and kg
+```
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
+# Features
+- Compile-time unit checking
+- Automatic unit inference
+- Mutable (`let`) and immutable (`const`) bindings
 
-Static assets, like favicons, can be placed in the `public/` directory.
+## Automatic unit inference
+You don't always need to explicitly write the unit:
+```Tau
+let force: N = 10;
+let mass: kg = 4;
+let acceleration = force / mass;  # Result: m/s^2
+```
 
-## 🧞 Commands
+Inferred dimensions are also checked against any explicit unit:
+```Tau
+let force: N = 10;
+let mass: kg = 4;
+let acceleration: m = force / mass;  # Error: Expected m got m/s^2
+```
 
-All commands are run from the root of the project, from a terminal:
+## Mutable and immutable variables
+Some languages will let you change gravity:
+```MATLAB
+g = 9.81
+% ...
+g = 2  % They wanted 't = 2'
+% ...
+mass = 4
+force = mass*g  % 8 - silent and hard-to-debug error
+```
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+In Tau this becomes:
+```Tau
+const g: m/s^2 = 9.81;
+# ...
+g = 2;  # Error: Assignment to constant 'g'
+```
 
-## 👀 Want to learn more?
+# Installation
 
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+1. Clone the repository;
+   `$ git clone git@github.com:JimmyBowcott/tau.git`
+2. Build the project
+   `$ cargo build --release`
+3. Run some code:
+   `$ cargo run test_file.tau`
+
+# TODO
+- [x] Add support for 'const' declaration
+- [ ] Control flow
+- [ ] Support for matrices
+- [ ] String support
+- [ ] Imperial unit support
