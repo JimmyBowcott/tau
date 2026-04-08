@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tau Playground</title>
+  </head>
+  <body>
+
+    <textarea id="code" rows="10" cols="50">
+let d: m = 5;
+let t: s = 2;
+print(d / t);
+    </textarea>
+
+    <br><br>
+
+    <button id="run">Run</button>
+
+    <pre id="output"></pre>
+
+    <script type="module">
+      import init, { execute } from "./tau_wasm.js";
+
+      await init();
+
+      const code = document.getElementById("code");
+      const output = document.getElementById("output");
+
+      document.getElementById("run").onclick = () => {
+        try {
+          const result = execute(code.value);
+          output.textContent = result;
+        } catch (e) {
+          output.textContent = e.toString();
+        }
+      };
+    </script>
+
+  </body>
+</html>
