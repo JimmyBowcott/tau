@@ -1,6 +1,7 @@
 use analysis::Analyser;
 use error::Error;
 use lexer::Lexer;
+use output::Output;
 use parser::Parser;
 use runtime::Env;
 
@@ -11,8 +12,9 @@ pub mod parser;
 pub mod runtime;
 pub mod token;
 pub mod error;
+pub mod output;
 
-pub fn run_source(source: &str) -> Result<(), Error> {
+pub fn run_source(source: &str, output: &mut dyn Output) -> Result<(), Error> {
     // TODO: Implement correct error types for analyser
     let lexer = Lexer::new(source);
     let tokens = lexer.collect();
@@ -25,7 +27,7 @@ pub fn run_source(source: &str) -> Result<(), Error> {
 
     let mut env = Env::new();
     for stmt in stmts {
-        stmt.exec(&mut env)?;
+        stmt.exec(&mut env, output)?;
     }
 
     Ok(())

@@ -1,6 +1,19 @@
 use wasm_bindgen::prelude::*;
-use tau_core::run_source;
+use std::cell::RefCell;
+use tau_core::{output::Output, run_source};
 use console_error_panic_hook;
+
+thread_local! {
+    static BUFFER: RefCell<String> = RefCell::new(String::new());
+}
+
+struct WasmOutput;
+
+impl Output for WasmOutput {
+    fn write(& mut self, s: &str) {
+        BUFFER.with(|b| b.borrow_mut().push_str(s));
+    }
+}
 
 #[wasm_bindgen(start)]
 fn main() {
@@ -10,8 +23,11 @@ fn main() {
 
 #[wasm_bindgen]
 pub fn execute(source: &str) -> String {
-    match run_source(source) {
-        Ok(_) => "Execution successful".into(),
-        Err(e) => format!("Error: {}", e),
+    BUFFER.with(|b| b.borrow_mut().clear());
+    let mut out = WasmOutput;
+
+    match run_source(source, &mut out) {
+        Ok(_) => BUFFER.with(|b| b.borrow().clone()),
+        Err(e) => e.to_string(),
     }
 }

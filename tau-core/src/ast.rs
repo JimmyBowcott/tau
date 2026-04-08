@@ -1,5 +1,5 @@
 use std::fmt;
-use crate::{error::Error, runtime::Env};
+use crate::{error::Error, output::Output, runtime::Env};
 
 #[derive(Debug, Clone, Eq)]
 pub struct Spanned<T> {
@@ -125,7 +125,7 @@ impl Expr {
 }
 
 impl Stmt {
-    pub fn exec(&self, env: &mut Env) -> Result<(), Error> {
+    pub fn exec(&self, env: &mut Env, output: &mut dyn Output) -> Result<(), Error> {
         match &self.node {
             StmtKind::Expr(expr) => {
                 expr.eval(env)?;
@@ -146,7 +146,7 @@ impl Stmt {
             }
             StmtKind::Print(expr) => {
                 let val = expr.eval(env)?;
-                println!("{}", val);
+                output.write(&format!("{}", val));
             }
         };
         Ok(())
@@ -157,6 +157,23 @@ impl Stmt {
 mod tests {
     use crate::ast::{BinaryOp, Expr, ExprKind, Stmt, StmtKind};
     use crate::runtime::Env;
+    use crate::output::Output;
+
+    struct MockOutput {
+        pub buf: String,
+    }
+
+    impl MockOutput {
+        fn new() -> Self {
+            Self { buf: String::new() }
+        }
+    }
+
+    impl Output for MockOutput {
+        fn write(&mut self, s: &str) {
+            self.buf.push_str(s);
+        }
+    }
 
     fn env() -> Env {
         Env::new()
@@ -207,7 +224,8 @@ mod tests {
             value: Some(Expr::new(ExprKind::Number(10.0), 0, 0)),
             unit: None,
         }, 1, 1);
-        stmt.exec(&mut env).unwrap();
+        let mut out = MockOutput::new();
+        stmt.exec(&mut env, &mut out).unwrap();
         assert_eq!(*env.get("x").unwrap(), 10.0);
     }
 

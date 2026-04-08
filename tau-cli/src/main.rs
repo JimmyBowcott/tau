@@ -1,7 +1,15 @@
 use std::process;
 
 use tau_cli::source::SourceFile;
-use tau_core::{error::Error, run_source};
+use tau_core::{error::Error, output::Output, run_source};
+
+struct Stdout;
+
+impl Output for Stdout {
+    fn write(&mut self, s: &str) {
+        println!("{}", s);
+    }
+}
 
 fn main() {
     if let Err(e) = run() {
@@ -12,9 +20,10 @@ fn main() {
 
 fn run() -> Result<(), Error> {
     let (name, text) = get_input()?;
+    let mut stdout = Stdout;
 
     let source = SourceFile::new(name.clone(), text);
-    run_source(&source.text)
+    run_source(&source.text, &mut stdout)
         .map_err(|e| e.with_source(name.as_str(), source.get_line(e.line)))?;
     Ok(())
 }
