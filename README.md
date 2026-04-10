@@ -2,6 +2,8 @@
 A statically checked unit-aware programming language that prevents dimensional mistakes at compile time.
 Tau lets you write variables in SI units so that your bad maths gets caught early on.
 
+[Try it out!](https://jimmybowcott.github.io/tau/)
+
 # Why Tau?
 Do you remember the time your engineering coursework took 2 hours too long because you wrote the wrong unit on a piece of MATLAB code? Well I do. This problem, among others, can be entirely avoided by using a progamming language that enforces explicitly typed units.
 
