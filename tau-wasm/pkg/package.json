@@ -1,0 +1,15 @@
+{
+  "name": "tau-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "tau_wasm_bg.wasm",
+    "tau_wasm.js",
+    "tau_wasm.d.ts"
+  ],
+  "main": "tau_wasm.js",
+  "types": "tau_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

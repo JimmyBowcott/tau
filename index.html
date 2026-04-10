@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tau Playground</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d1117;
+        --panel: #161b22;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --error: #ff4d4d;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+      }
+
+      main {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 900px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .box {
+        width: 100%;
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 14px;
+        outline: none;
+      }
+
+      textarea.box {
+        min-height: 220px;
+        resize: vertical;
+      }
+
+      pre.box {
+        min-height: 120px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      button {
+        background: var(--accent);
+        border: none;
+        padding: 10px 16px;
+        border-radius: 8px;
+        color: #000;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:hover {
+        opacity: 0.9;
+      }
+
+      .error {
+        color: var(--error);
+      }
+
+      footer {
+        padding: 16px;
+        text-align: center;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      footer a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>Tau Playground</header>
+
+    <main>
+      <div class="container">
+        <textarea id="code" class="box">let d: m = 5;
+let t: s = 2;
+print(d / t);</textarea>
+
+        <div class="row">
+          <button id="run">Run</button>
+        </div>
+
+        <pre id="output" class="box"></pre>
+      </div>
+    </main>
+
+    <footer>
+      <a href="https://github.com/your-repo" target="_blank">GitHub</a>
+    </footer>
+
+    <script type="module">
+      import init, { execute } from "./tau-wasm/pkg/tau_wasm.js";
+
+      await init();
+
+      const code = document.getElementById("code");
+      const output = document.getElementById("output");
+
+      document.getElementById("run").onclick = () => {
+        try {
+          const result = execute(code.value);
+          output.textContent = result;
+
+          if (typeof result === "string" && result.startsWith("Error")) {
+            output.classList.add("error");
+          } else {
+            output.classList.remove("error");
+          }
+        } catch (e) {
+          output.textContent = e.toString();
+          output.classList.add("error");
+        }
+      };
+    </script>
+  </body>
+</html>
